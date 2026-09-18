@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Replaced the child-profile placeholder with the real enrollment form: optional name, age in months validated via ChildProfile.isAgeValid, Anganwadi ID, state dropdown, district and worker name.
+A valid form writes the profile to the session provider and continues to the questionnaire; the routes walkthrough now fills the form before advancing.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added a Riverpod session provider carrying the in-progress enrollment profile and questionnaire answers/summary across screens.
 Screens can now write the child profile once and read it downstream; state is in-memory and clears on reset.
 

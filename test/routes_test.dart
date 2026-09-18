@@ -51,6 +51,11 @@ void main() {
   }
 
   testWidgets('tapping next walks the whole screening flow', (tester) async {
+    // Tall surface so the lazy enrollment form builds every field at once.
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+
     await tester.pumpWidget(buildTestApp('/'));
     await tester.pumpAndSettle();
     expect(find.byType(HomeScreen), findsOneWidget);
@@ -61,7 +66,22 @@ void main() {
       expect(find.byType(screen), findsOneWidget);
     }
 
+    Future<void> fillField(String label, String text) {
+      return tester.enterText(find.widgetWithText(TextFormField, label), text);
+    }
+
     await tapNext('नई स्क्रीनिंग शुरू करें', ChildProfileScreen);
+
+    // The enrollment form validates — fill the required fields first.
+    await fillField('उम्र (महीनों में)', '30');
+    await fillField('आंगनबाड़ी आईडी', 'IN-MP-042');
+    await fillField('जिला', 'Indore');
+    await fillField('कार्यकर्ता का नाम', 'सीमा');
+    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Madhya Pradesh').last);
+    await tester.pumpAndSettle();
+
     await tapNext('प्रश्नावली की ओर बढ़ें', QuestionnaireScreen);
     await tapNext('सहमति की ओर बढ़ें', ConsentScreen);
     await tapNext('अभिभावक ने सहमति दी', ElicitationScreen);
