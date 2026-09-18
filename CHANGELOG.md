@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Devadathan M R - pending
+Added an idempotent, development-only Supabase demo-data seeder with synthetic parent and clinician accounts.
+It creates linked children, screening histories, appointments, messages, and clinician-only notes for dashboard testing.
+
+### 2026-09-18 - Devadathan M R - pending
 Added the EarlyEcho Next.js care portal with parent and clinician workspaces for screening summaries, appointments, and secure care-team messaging.
 Introduced Supabase role-based access controls and row-level security, plus dashboard checks in continuous integration.
 

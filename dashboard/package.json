@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed:demo": "node scripts/seed-demo-data.mjs",
+    "seed:check": "node --check scripts/seed-demo-data.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",
