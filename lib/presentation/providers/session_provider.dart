@@ -17,6 +17,7 @@ class SessionState {
     this.questionnaireSkipped = false,
     this.consentedAt,
     this.consentLogId,
+    this.protocolTimings = const [],
   });
 
   /// Enrollment details from the child profile screen.
@@ -39,6 +40,11 @@ class SessionState {
   /// linked to this session once the session is persisted.
   final String? consentLogId;
 
+  /// Capture window per elicitation protocol in the §5.1 contract shape —
+  /// `[{'protocol': 'rattle', 'start_ms': 0, 'end_ms': 60000}, ...]` —
+  /// handed to the native audio pipeline when the recording is analysed.
+  final List<Map<String, Object>> protocolTimings;
+
   SessionState copyWith({
     ChildProfile? childProfile,
     Map<String, bool>? milestoneAnswers,
@@ -46,6 +52,7 @@ class SessionState {
     bool? questionnaireSkipped,
     DateTime? consentedAt,
     String? consentLogId,
+    List<Map<String, Object>>? protocolTimings,
   }) {
     return SessionState(
       childProfile: childProfile ?? this.childProfile,
@@ -54,6 +61,7 @@ class SessionState {
       questionnaireSkipped: questionnaireSkipped ?? this.questionnaireSkipped,
       consentedAt: consentedAt ?? this.consentedAt,
       consentLogId: consentLogId ?? this.consentLogId,
+      protocolTimings: protocolTimings ?? this.protocolTimings,
     );
   }
 }
@@ -95,6 +103,12 @@ class SessionNotifier extends StateNotifier<SessionState> {
       consentedAt: consentedAt,
       consentLogId: consentLogId,
     );
+  }
+
+  /// Records the per-protocol capture windows produced by the guided
+  /// elicitation sequence, ready for the native audio pipeline.
+  void recordProtocolTimings(List<Map<String, Object>> timings) {
+    state = state.copyWith(protocolTimings: timings);
   }
 
   void reset() {

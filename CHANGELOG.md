@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added SessionState.protocolTimings plus recordProtocolTimings, carrying per-protocol capture windows in the §5.1 contract shape ([{'protocol': 'rattle', 'start_ms': 0, 'end_ms': 60000}, ...]).
+The guided elicitation sequence can now hand the native audio pipeline its timing contract without breaking any existing session state.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added an ElicitationAudioPlayer port and provider for per-protocol Hindi instruction clips; the three bundled mp3s (rattle, toy hide, imitate) are 3–4 s silent placeholders standing in for real instruction recordings.
 The elicitation step can speak each activity's prompt on-device while widget tests stub the player, matching the consent audio pattern.
 

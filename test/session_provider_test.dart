@@ -83,6 +83,20 @@ void main() {
     expect(state.milestoneSummary!.concernCount, 1);
   });
 
+  test('recordProtocolTimings stores the §5.1 capture windows', () {
+    final container = makeContainer();
+    final notifier = container.read(sessionProvider.notifier);
+
+    const timings = <Map<String, Object>>[
+      {'protocol': 'rattle', 'start_ms': 0, 'end_ms': 60000},
+      {'protocol': 'toy_hide', 'start_ms': 60000, 'end_ms': 140000},
+      {'protocol': 'imitate', 'start_ms': 140000, 'end_ms': 200000},
+    ];
+    notifier.recordProtocolTimings(timings);
+
+    expect(container.read(sessionProvider).protocolTimings, timings);
+  });
+
   test('profile and questionnaire persist together until reset', () {
     final container = makeContainer();
     final notifier = container.read(sessionProvider.notifier);
