@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added a Riverpod session provider carrying the in-progress enrollment profile and questionnaire answers/summary across screens.
+Screens can now write the child profile once and read it downstream; state is in-memory and clears on reset.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added a pure-Dart milestone engine (age filtering, yes/no tally, normal/warning status) plus a Hindi CDC-milestone question asset.
 The optional questionnaire now has a scoring contract: two or more missed age-applicable milestones flag a warning context that never gates the acoustic result.
 
