@@ -4,6 +4,10 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-09-19 - Devadathan M R - pending
+Aligned the web care portal with the mobile app's warm saffron, teal, and ivory visual language.
+Dashboard cards, controls, status treatments, authentication screens, and responsive layouts now share the same accessible design system.
+
 ### 2026-09-19 - Mathew Joseph
 Added parent and care-worker authentication against the shared Supabase profiles and role contract, with an idempotent mobile access migration.
 Completed screening and linked consent-audit records now sync after persistence and retry after a care-worker signs in.
