@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Bumped the local database to version 2 so `consent_logs.session_id` is nullable, migrating existing databases via a table rebuild that preserves audit rows; `ConsentLog` now allows a null session link and the repository can backfill it later.
+Consent can be recorded before the session row exists — the link attaches when the screening completes — while the foreign-key cascade still protects rows written against older sessions.
+
+### 2026-09-18 - Mathew Joseph - pending
 Replaced the questionnaire placeholder with a CDC milestone list loaded from the bundled Hindi asset, age-filtered per enrolled child, with हाँ/नहीं segments, a skip path, and a finish that stores the context-only summary.
 Answers and the milestone summary now flow through the session provider into the consent step without ever blocking navigation.
 

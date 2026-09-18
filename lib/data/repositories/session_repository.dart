@@ -5,8 +5,12 @@ import '../models/session_model.dart';
 
 /// A timestamped parental-consent confirmation tied to a screening session.
 ///
-/// Written when the worker taps "Parent has consented"; replayed to the cloud
-/// `consent_logs` audit table during sync.
+/// Written when the worker taps "माता-पिता ने सहमति दी" on the consent screen;
+/// replayed to the cloud `consent_logs` audit table during sync.
+///
+/// Consent is confirmed before the session row exists, so [sessionId] starts
+/// null and is backfilled via [SessionRepository.attachConsentLogToSession]
+/// once the screening completes and the session is persisted.
 class ConsentLog {
   const ConsentLog({
     required this.id,
@@ -18,7 +22,9 @@ class ConsentLog {
   });
 
   final String id;
-  final String sessionId;
+
+  /// Null until the screening session row is created and linked.
+  final String? sessionId;
   final String? anganwadiId;
   final String? workerName;
   final DateTime consentedAt;
@@ -35,7 +41,7 @@ class ConsentLog {
 
   factory ConsentLog.fromMap(Map<String, dynamic> map) => ConsentLog(
     id: map['id'] as String,
-    sessionId: map['session_id'] as String,
+    sessionId: map['session_id'] as String?,
     anganwadiId: map['anganwadi_id'] as String?,
     workerName: map['worker_name'] as String?,
     consentedAt: DateTime.parse(map['consented_at'] as String),
@@ -142,6 +148,21 @@ class SessionRepository {
       DatabaseHelper.tableConsentLogs,
       log.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  /// Backfills `session_id` on a consent log written before its session row
+  /// existed, once the screening completes and the session is persisted.
+  Future<void> attachConsentLogToSession(
+    String consentLogId,
+    String sessionId,
+  ) async {
+    final db = await _helper.database;
+    await db.update(
+      DatabaseHelper.tableConsentLogs,
+      {'session_id': sessionId},
+      where: 'id = ?',
+      whereArgs: [consentLogId],
     );
   }
 

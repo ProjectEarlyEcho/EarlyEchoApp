@@ -3,11 +3,16 @@ import 'package:sqflite/sqflite.dart';
 
 /// Owns the on-device SQLite database for EarlyEcho.
 ///
-/// Two tables are created at version 1:
+/// Two tables are maintained:
 /// - `sessions`: one row per completed screening, matching the columns in the
 ///   domain spec so rows can be replayed to the cloud `screenings` table.
 /// - `consent_logs`: timestamped parental-consent audit entries, one per
 ///   consent confirmation made on the consent screen.
+///
+/// Version history:
+/// - v1: initial `sessions` + `consent_logs` schema.
+/// - v2: `consent_logs.session_id` becomes nullable — consent is confirmed
+///   before the session row exists, so the link is backfilled later.
 ///
 /// The default [instance] opens `earlyecho.db` in the app documents area.
 /// Tests can inject a different [DatabaseFactory] (e.g. `databaseFactoryFfi`)
@@ -21,7 +26,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper();
 
   static const String databaseName = 'earlyecho.db';
-  static const int databaseVersion = 1;
+  static const int databaseVersion = 2;
 
   static const String tableSessions = 'sessions';
   static const String tableConsentLogs = 'consent_logs';
@@ -55,7 +60,7 @@ class DatabaseHelper {
     await db.execute('PRAGMA foreign_keys = ON');
   }
 
-  /// Version 1 schema: the screening `sessions` table plus the
+  /// Latest schema: the screening `sessions` table plus the
   /// `consent_logs` audit table.
   static Future<void> onCreate(Database db, int version) async {
     await db.execute('''
@@ -84,7 +89,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE $tableConsentLogs (
         id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL REFERENCES $tableSessions(id) ON DELETE CASCADE,
+        session_id TEXT REFERENCES $tableSessions(id) ON DELETE CASCADE,
         anganwadi_id TEXT,
         worker_name TEXT,
         consented_at TEXT NOT NULL,
@@ -93,12 +98,40 @@ class DatabaseHelper {
     ''');
   }
 
-  /// Future schema migrations land here, gated on [oldVersion].
+  /// Schema migrations, gated on [oldVersion].
   static Future<void> onUpgrade(
     Database db,
     int oldVersion,
     int newVersion,
-  ) async {}
+  ) async {
+    if (oldVersion < 2) {
+      // Consent is confirmed before the session row exists, so v2 makes
+      // `session_id` nullable for the later backfill. SQLite cannot relax a
+      // NOT NULL column in place — rebuild the table instead: create the new
+      // shape, copy the rows across, drop the old table, then rename.
+      await db.execute('''
+        CREATE TABLE consent_logs_new (
+          id TEXT PRIMARY KEY,
+          session_id TEXT REFERENCES $tableSessions(id) ON DELETE CASCADE,
+          anganwadi_id TEXT,
+          worker_name TEXT,
+          consented_at TEXT NOT NULL,
+          synced INTEGER NOT NULL DEFAULT 0
+        )
+      ''');
+      await db.execute('''
+        INSERT INTO consent_logs_new (
+          id, session_id, anganwadi_id, worker_name, consented_at, synced
+        )
+        SELECT id, session_id, anganwadi_id, worker_name, consented_at, synced
+        FROM $tableConsentLogs
+      ''');
+      await db.execute('DROP TABLE $tableConsentLogs');
+      await db.execute(
+        'ALTER TABLE consent_logs_new RENAME TO $tableConsentLogs',
+      );
+    }
+  }
 
   /// Closes the handle so tests or teardown can reopen a clean database.
   Future<void> close() async {
