@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added the Supabase schema for the screenings table and a matching consent_logs audit table, both with insert-only RLS policies.
+Defines the cloud sink for synced biomarker rows and consent confirmations scoped to the worker's Anganwadi JWT claim.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added SyncRepository that drains the unsynced queue through an injectable ScreeningUploader port backed by Supabase upserts.
 Successful uploads flip the synced flag while failures stay queued for retry; an uninitialized client reports an offline result instead of throwing.
 
