@@ -28,19 +28,21 @@ class AppStrings {
       'en': 'Step {n}/{total} • {name}',
     },
     'step1_name': {'hi': 'बच्चे की जानकारी', 'en': 'Child details'},
-    'step2_name': {
+    'step2_name': {'hi': 'विकास लक्ष्य', 'en': 'Developmental goals'},
+    'step3_name': {
       'hi': 'प्रश्नावली (वैकल्पिक)',
       'en': 'Questionnaire (optional)',
     },
-    'step3_name': {'hi': 'सहमति', 'en': 'Consent'},
-    'step4_name': {'hi': 'ध्वनि प्रेरण', 'en': 'Sound elicitation'},
-    'step5_name': {'hi': 'विश्लेषण', 'en': 'Analysis'},
-    'step6_name': {'hi': 'परिणाम', 'en': 'Result'},
-    'step7_name': {'hi': 'रेफरल', 'en': 'Referral'},
+    'step4_name': {'hi': 'सहमति', 'en': 'Consent'},
+    'step5_name': {'hi': 'ध्वनि प्रेरण', 'en': 'Sound elicitation'},
+    'step6_name': {'hi': 'विश्लेषण', 'en': 'Analysis'},
+    'step7_name': {'hi': 'परिणाम', 'en': 'Result'},
+    'step8_name': {'hi': 'रेफरल', 'en': 'Referral'},
 
     // ── Screen titles ──
     'title_child_profile': {'hi': 'बच्चे की जानकारी', 'en': 'Child details'},
     'title_questionnaire': {'hi': 'प्रश्नावली', 'en': 'Questionnaire'},
+    'title_goals': {'hi': 'विकास लक्ष्य', 'en': 'Developmental goals'},
     'title_consent': {'hi': 'सहमति', 'en': 'Consent'},
     'title_elicitation': {'hi': 'ध्वनि प्रेरण', 'en': 'Sound elicitation'},
     'title_processing': {'hi': 'विश्लेषण', 'en': 'Analysis'},
@@ -177,14 +179,36 @@ class AppStrings {
     'q_question_n': {'hi': 'सवाल {n}', 'en': 'Question {n}'},
     'q_yes': {'hi': 'हाँ', 'en': 'Yes'},
     'q_no': {'hi': 'नहीं', 'en': 'No'},
+    'q_previous': {'hi': 'पिछला', 'en': 'Previous'},
+    'q_next_question': {'hi': 'अगला', 'en': 'Next'},
+    'goals_intro': {
+      'hi':
+          '{age} के लिए CDC के {count} विकास लक्ष्य देखें। जो बच्चा आमतौर पर करता है, उसे चुनें।',
+      'en':
+          'Review the CDC {count} developmental goals for {age}. Tick skills the child usually does.',
+    },
+    'goals_continue': {
+      'hi': 'प्रश्नावली की ओर बढ़ें',
+      'en': 'Continue to questionnaire',
+    },
+    'goals_disclaimer': {
+      'hi':
+          'यह विकास की निगरानी है, निदान या मान्य स्क्रीनिंग परीक्षण नहीं। किसी कौशल के छूटने, पहले सीखे कौशल के खोने या चिंता होने पर डॉक्टर से बात करें।',
+      'en':
+          'This is developmental monitoring, not a diagnosis or a validated screening tool. If a child has not reached a goal, has lost a skill, or you are concerned, discuss it with a doctor.',
+    },
+    'goals_source': {
+      'hi': 'CDC माइलस्टोन स्रोत देखें',
+      'en': 'View CDC milestone source',
+    },
 
     // ── Consent (step 3) ──
     'consent_heading': {'hi': 'अभिभावक की सहमति', 'en': 'Parental consent'},
     'consent_body': {
       'hi':
-          'रिकॉर्डिंग शुरू करने से पहले अभिभावक को हिंदी में सहमति का वाक्य सुनाएँ।',
+          'रिकॉर्डिंग शुरू करने से पहले अभिभावक को हिन्दी सहमति संदेश सुनाएँ।',
       'en':
-          'Play the Hindi consent statement to the parent before recording starts.',
+          'Play the English consent statement to the parent before recording starts.',
     },
     'consent_playing': {
       'hi': 'सहमति ऑडियो चल रहा है…',
@@ -237,6 +261,7 @@ class AppStrings {
       'hi': 'अगली गतिविधि शुरू करें',
       'en': 'Start next activity',
     },
+    'el_skip_activity': {'hi': 'गतिविधि छोड़ें', 'en': 'Skip activity'},
     'el_mic_unavailable': {
       'hi': 'माइक्रोफ़ोन उपलब्ध नहीं है — रिकॉर्डिंग के बिना जारी।',
       'en': 'Microphone unavailable — continuing without recording.',
@@ -374,8 +399,8 @@ class AppStrings {
   static String tr(String key, Locale? locale) {
     final entry = _table[key];
     if (entry == null) return key;
-    if (locale?.languageCode == 'en') return entry['en'] ?? entry['hi'] ?? key;
-    return entry['hi'] ?? entry['en'] ?? key;
+    if (locale?.languageCode == 'hi') return entry['hi'] ?? entry['en'] ?? key;
+    return entry['en'] ?? entry['hi'] ?? key;
   }
 
   /// [tr] with `{placeholder}` substitution, e.g.

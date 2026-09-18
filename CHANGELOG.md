@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph
+Aligned the screening flow with MozhiMuthal: added the complete MyChild questionnaire engine and dedicated age-based CDC developmental goals, fixed locale-aware English/Hindi rendering, and passed child age into native audio analysis.
+Added per-activity voice skips plus real locale-selected Hindi and English parental-consent audio, each shorter than 15 seconds.
+
+### 2026-09-18 - Mathew Joseph
 Localized every user-facing screen string through AppStrings — home, enrollment, questionnaire, consent, elicitation protocols, processing, result, referral, history and settings all render in the chosen language.
 A language row in settings re-opens the picker; tests keep passing under the Hindi default.
 

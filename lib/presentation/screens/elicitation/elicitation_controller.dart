@@ -127,6 +127,33 @@ class ElicitationController extends StateNotifier<ElicitationState> {
       );
     }
   }
+
+  /// Records the current activity as skipped and advances without assigning
+  /// audio to its protocol window.
+  void skip() {
+    if (state.completed) return;
+    final protocol = state.current;
+    final startMs = ElicitationState._offsetSeconds(state.protocolIndex) * 1000;
+    final timings = [
+      ...state.timings,
+      <String, Object>{
+        'protocol': protocol.key,
+        'start_ms': startMs,
+        'end_ms': startMs + state.elapsedSeconds * 1000,
+        'skipped': true,
+      },
+    ];
+    if (state.protocolIndex >= elicitationProtocols.length - 1) {
+      state = state.copyWith(running: false, completed: true, timings: timings);
+    } else {
+      state = state.copyWith(
+        protocolIndex: state.protocolIndex + 1,
+        elapsedSeconds: 0,
+        running: false,
+        timings: timings,
+      );
+    }
+  }
 }
 
 /// Per-screen controller; auto-disposed so revisiting the route restarts

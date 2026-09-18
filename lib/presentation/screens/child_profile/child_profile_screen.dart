@@ -125,7 +125,7 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
             workerName: _workerController.text.trim(),
           ),
         );
-    context.push('/questionnaire');
+    context.push('/developmental-goals');
   }
 
   @override

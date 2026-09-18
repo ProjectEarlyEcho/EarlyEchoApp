@@ -10,6 +10,7 @@ class MilestoneQuestion {
     required this.ageMinMonths,
     required this.ageMaxMonths,
     required this.questionHi,
+    this.questionEn,
     this.domain,
   });
 
@@ -23,8 +24,15 @@ class MilestoneQuestion {
   /// Hindi question text shown to the worker.
   final String questionHi;
 
+  /// Optional English question text shown when English is selected.
+  final String? questionEn;
+
   /// Optional CDC domain tag (social, language, cognitive, motor).
   final String? domain;
+
+  String questionForLanguage(String? languageCode) {
+    return questionEn ?? _englishQuestions[id] ?? questionHi;
+  }
 
   bool appliesTo(int childAgeMonths) =>
       childAgeMonths >= ageMinMonths && childAgeMonths <= ageMaxMonths;
@@ -34,6 +42,7 @@ class MilestoneQuestion {
     'age_min_months': ageMinMonths,
     'age_max_months': ageMaxMonths,
     'question_hi': questionHi,
+    if (questionEn != null) 'question_en': questionEn,
     if (domain != null) 'domain': domain,
   };
 
@@ -43,10 +52,38 @@ class MilestoneQuestion {
       ageMinMonths: (json['age_min_months'] as num).toInt(),
       ageMaxMonths: (json['age_max_months'] as num).toInt(),
       questionHi: json['question_hi'] as String,
+      questionEn: json['question_en'] as String?,
       domain: json['domain'] as String?,
     );
   }
 }
+
+const _englishQuestions = <String, String>{
+  'q_pull_to_stand': 'Does the child pull up to stand while holding something?',
+  'q_waves_bye': 'Does the child wave to say bye-bye?',
+  'q_calls_parent':
+      'Does the child call a parent mummy, daddy, or another special name?',
+  'q_understands_no': 'Does the child pause or stop when told no?',
+  'q_finds_hidden_toy':
+      'Does the child look for a hidden object, such as a toy under a cloth?',
+  'q_walks_alone': 'Does the child walk a few steps without support?',
+  'q_points_to_ask': 'Does the child point to ask for something or get help?',
+  'q_stacks_blocks': 'Can the child stack two small objects?',
+  'q_uses_objects':
+      'Does the child use objects correctly, such as drinking from a cup or combing hair?',
+  'q_two_word_phrases':
+      'Does the child put two words together, such as more water or mummy come?',
+  'q_kicks_ball': 'Does the child kick a ball?',
+  'q_points_to_picture':
+      'Does the child point to a picture in a book when they hear its name?',
+  'q_two_step_instructions':
+      'Does the child follow two-step instructions, such as pick up the book and give it to me?',
+  'q_pretend_play':
+      'Does the child play pretend, such as talking on a toy phone or driving a car?',
+  'q_takes_turns': 'Does the child take turns with other children during play?',
+  'q_speaks_clearly':
+      'Does the child speak clearly enough for people outside the home to understand?',
+};
 
 /// Overall questionnaire outcome for a session.
 enum MilestoneStatus { normal, warning }

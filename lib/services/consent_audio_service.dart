@@ -1,11 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:just_audio/just_audio.dart';
 
-/// Bundled Hindi consent statement played on the consent screen.
-///
-/// Placeholder clip — the production asset is a real AI4Bharat TTS recording
-/// of the translated consent script.
-const consentAudioAssetPath = 'assets/audio/consent_hi.mp3';
+import '../presentation/providers/locale_provider.dart';
+
+const consentHindiAudioAssetPath = 'assets/audio/consent_hi.mp3';
+const consentEnglishAudioAssetPath = 'assets/audio/consent_en.mp3';
 
 /// Thin playback port for the consent statement.
 ///
@@ -23,7 +22,7 @@ abstract class ConsentAudioPlayer {
 
 /// [ConsentAudioPlayer] backed by `just_audio` and the bundled asset.
 class JustAudioConsentPlayer implements ConsentAudioPlayer {
-  JustAudioConsentPlayer({this.assetPath = consentAudioAssetPath});
+  JustAudioConsentPlayer({this.assetPath = consentEnglishAudioAssetPath});
 
   final String assetPath;
   final AudioPlayer _player = AudioPlayer();
@@ -48,7 +47,12 @@ class JustAudioConsentPlayer implements ConsentAudioPlayer {
 
 /// Player used by the consent screen; overridden in widget tests.
 final consentAudioPlayerProvider = Provider<ConsentAudioPlayer>((ref) {
-  final player = JustAudioConsentPlayer();
+  final locale = ref.watch(appLocaleProvider);
+  final player = JustAudioConsentPlayer(
+    assetPath: locale?.languageCode == 'hi'
+        ? consentHindiAudioAssetPath
+        : consentEnglishAudioAssetPath,
+  );
   ref.onDispose(player.dispose);
   return player;
 });

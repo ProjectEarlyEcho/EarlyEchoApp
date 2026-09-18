@@ -49,7 +49,8 @@ class AudioPipelineService {
   static Future<void> requestPermission() => _invoke('requestPermission');
 
   /// Starts capture; each filled rolling window is analysed natively.
-  static Future<void> startRecording() => _invoke('startRecording');
+  static Future<void> startRecording({required int childAgeMonths}) =>
+      _invoke('startRecording', {'child_age_months': childAgeMonths});
 
   /// Ends capture. Safe to call when nothing is recording.
   static Future<void> stopRecording() => _invoke('stopRecording');

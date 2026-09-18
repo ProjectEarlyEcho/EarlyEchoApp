@@ -36,6 +36,7 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
   Timer? _tickTimer;
 
   ElicitationAudioPlayer? _audio;
+  bool _captureStarted = false;
 
   /// Lazily resolved so the field can also be stopped from [dispose]
   /// without reading providers during teardown.
@@ -66,10 +67,14 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
   Future<void> _startProtocol() async {
     final state = ref.read(elicitationControllerProvider);
     if (state.running || state.completed) return;
-    if (state.protocolIndex == 0) {
+    if (!_captureStarted) {
       try {
         await AudioPipelineService.requestPermission();
-        await AudioPipelineService.startRecording();
+        await AudioPipelineService.startRecording(
+          childAgeMonths:
+              ref.read(sessionProvider).childProfile?.childAgeMonths ?? 0,
+        );
+        _captureStarted = true;
       } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -91,6 +96,10 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
     } catch (_) {
       // Visual instruction stays on screen; audio failure never blocks.
     }
+  }
+
+  void _skipProtocol() {
+    ref.read(elicitationControllerProvider.notifier).skip();
   }
 
   Future<void> _replayInstruction() async {
@@ -226,23 +235,48 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
                   ),
                 )
               else if (state.running)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
-                  child: Text(
-                    AppStrings.tr('el_recording_note', l10n),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Text(
+                        AppStrings.tr('el_recording_note', l10n),
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: _skipProtocol,
+                      icon: const Icon(Icons.skip_next_rounded),
+                      label: Text(AppStrings.tr('el_skip_activity', l10n)),
+                    ),
+                  ],
                 )
               else
-                FilledButton.icon(
-                  onPressed: _startProtocol,
-                  icon: const Icon(Icons.play_arrow_rounded),
-                  label: Text(
-                    state.protocolIndex == 0
-                        ? AppStrings.tr('el_start', l10n)
-                        : AppStrings.tr('el_next_activity', l10n),
-                  ),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: _skipProtocol,
+                        icon: const Icon(Icons.skip_next_rounded),
+                        label: Text(AppStrings.tr('el_skip_activity', l10n)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton.icon(
+                        onPressed: _startProtocol,
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: Text(
+                          state.protocolIndex == 0
+                              ? AppStrings.tr('el_start', l10n)
+                              : AppStrings.tr('el_next_activity', l10n),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
             ],
           ),

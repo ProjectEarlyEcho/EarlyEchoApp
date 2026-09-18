@@ -57,7 +57,7 @@ class MainActivity : FlutterActivity() {
                 try {
                     when (call.method) {
                         "requestPermission" -> requestMicrophonePermission(result)
-                        "startRecording" -> startCapture(result)
+                        "startRecording" -> startCapture(call, result)
                         "stopRecording" -> {
                             stopCapture()
                             result.success(true)
@@ -117,7 +117,7 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun startCapture(result: MethodChannel.Result) {
+    private fun startCapture(call: MethodCall, result: MethodChannel.Result) {
         if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) !=
             PackageManager.PERMISSION_GRANTED
         ) {
@@ -134,6 +134,7 @@ class MainActivity : FlutterActivity() {
         }
 
         aggregate.reset()
+        aggregate.ageMonths = call.argument<Int>("child_age_months") ?: 0
         modelError = null
         capturing = true
         val generation = captureGeneration.incrementAndGet()

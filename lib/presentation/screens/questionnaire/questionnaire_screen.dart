@@ -1,25 +1,34 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_strings.dart';
 import '../../../data/models/child_profile.dart';
 import '../../../domain/milestone_engine.dart';
+import '../../../domain/my_child_engine.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
 
-const _milestoneAssetPath = 'assets/data/milestones_hi.json';
-
-/// Loads and parses the bundled Hindi milestone questions.
+/// Loads the complete MozhiMuthal developmental question bank.
 ///
 /// Overridable so tests can substitute a hermetic loader.
 final milestoneQuestionsLoaderProvider =
     Provider<Future<List<MilestoneQuestion>> Function()>(
       (ref) => () async {
-        final raw = await rootBundle.loadString(_milestoneAssetPath);
-        return MilestoneEngine.parseQuestions(raw);
+        return MyChildEngine.questions
+            .where((question) => !question.isMchatQuestion)
+            .map(
+              (question) => MilestoneQuestion(
+                id: question.id,
+                ageMinMonths: question.minAge,
+                ageMaxMonths: question.maxAge,
+                questionHi: question.prompt,
+                questionEn: question.prompt,
+                domain: MyChildEngine.questionGroupFor(question),
+              ),
+            )
+            .toList();
       },
     );
 
@@ -40,8 +49,10 @@ class QuestionnaireScreen extends ConsumerStatefulWidget {
 
 class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
   final Map<String, bool> _answers = {};
+  final ScrollController _questionScrollController = ScrollController();
   List<MilestoneQuestion>? _questions;
   bool _loadFailed = false;
+  int _currentQuestionIndex = 0;
 
   @override
   void initState() {
@@ -65,6 +76,21 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
     ref
         .read(sessionProvider.notifier)
         .recordMilestoneAnswer(question.id, answer);
+  }
+
+  void _showQuestion(int index) {
+    setState(() => _currentQuestionIndex = index);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _questionScrollController.hasClients) {
+        _questionScrollController.jumpTo(0);
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _questionScrollController.dispose();
+    super.dispose();
   }
 
   void _skip() {
@@ -119,16 +145,6 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton.icon(
-                      onPressed: questions == null
-                          ? null
-                          : () => _finish(profile?.childAgeMonths),
-                      icon: const Icon(Icons.arrow_forward_rounded),
-                      label: Text(AppStrings.tr('q_next', l10n)),
-                    ),
-                  ),
                 ],
               ),
             ],
@@ -143,8 +159,81 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
   List<MilestoneQuestion> _applicableFor(ChildProfile? profile) {
     final all = _questions ?? const <MilestoneQuestion>[];
     if (profile == null) return all;
-    return MilestoneEngine.questionsForAge(all, profile.childAgeMonths);
+    final applicable = MilestoneEngine.questionsForAge(
+      all,
+      profile.childAgeMonths,
+    );
+    return applicable.isEmpty ? _olderChildQuestions : applicable;
   }
+
+  static const _olderChildQuestions = <MilestoneQuestion>[
+    MilestoneQuestion(
+      id: 'older_conversation',
+      ageMinMonths: 37,
+      ageMaxMonths: 60,
+      questionHi: 'क्या बच्चा कम से कम दो बार आगे-पीछे बातचीत कर सकता है?',
+      questionEn:
+          'Can the child have a conversation with at least two back-and-forth exchanges?',
+      domain: 'Communication',
+    ),
+    MilestoneQuestion(
+      id: 'older_questions',
+      ageMinMonths: 37,
+      ageMaxMonths: 60,
+      questionHi: 'क्या बच्चा कौन, क्या, कहाँ या क्यों जैसे सवाल पूछता है?',
+      questionEn:
+          'Does the child ask questions such as who, what, where, or why?',
+      domain: 'Communication',
+    ),
+    MilestoneQuestion(
+      id: 'older_name',
+      ageMinMonths: 37,
+      ageMaxMonths: 60,
+      questionHi: 'क्या बच्चा पूछने पर अपना पहला नाम बताता है?',
+      questionEn: 'Does the child say their first name when asked?',
+      domain: 'Communication',
+    ),
+    MilestoneQuestion(
+      id: 'older_imaginative_play',
+      ageMinMonths: 37,
+      ageMaxMonths: 60,
+      questionHi: 'क्या बच्चा कल्पना का खेल खेलता है?',
+      questionEn: 'Does the child play pretend?',
+      domain: 'Learning and play',
+    ),
+    MilestoneQuestion(
+      id: 'older_other_children',
+      ageMinMonths: 37,
+      ageMaxMonths: 60,
+      questionHi: 'क्या बच्चा दूसरे बच्चों को देखकर उनके साथ खेलता है?',
+      questionEn: 'Does the child notice and join other children at play?',
+      domain: 'Social connection',
+    ),
+    MilestoneQuestion(
+      id: 'older_circle',
+      ageMinMonths: 37,
+      ageMaxMonths: 60,
+      questionHi: 'क्या बच्चा दिखाने पर गोला बना सकता है?',
+      questionEn: 'Can the child draw a circle when shown how?',
+      domain: 'Learning and play',
+    ),
+    MilestoneQuestion(
+      id: 'older_dress',
+      ageMinMonths: 37,
+      ageMaxMonths: 60,
+      questionHi: 'क्या बच्चा कुछ कपड़े बिना मदद के पहन सकता है?',
+      questionEn: 'Can the child put on some clothes without help?',
+      domain: 'Everyday skills',
+    ),
+    MilestoneQuestion(
+      id: 'older_fork',
+      ageMinMonths: 37,
+      ageMaxMonths: 60,
+      questionHi: 'क्या बच्चा कांटा इस्तेमाल कर सकता है?',
+      questionEn: 'Can the child use a fork?',
+      domain: 'Everyday skills',
+    ),
+  ];
 
   Widget _buildBody(ChildProfile? profile, List<MilestoneQuestion>? questions) {
     final l10n = ref.watch(appLocaleProvider);
@@ -158,6 +247,11 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
     if (applicable.isEmpty) {
       return Center(child: Text(AppStrings.tr('q_none', l10n)));
     }
+
+    final currentIndex = _currentQuestionIndex.clamp(0, applicable.length - 1);
+    final question = applicable[currentIndex];
+    final selected = _answers[question.id];
+    final isLastQuestion = currentIndex == applicable.length - 1;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -183,55 +277,93 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
-        Expanded(
-          child: ListView.separated(
-            itemCount: applicable.length,
-            separatorBuilder: (_, _) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final question = applicable[index];
-              final selected = _answers[question.id];
-              return AppSurface(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppStrings.trf('q_question_n', l10n, {
-                        'n': '${index + 1}',
-                      }),
-                      style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      question.questionHi,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                    const SizedBox(height: 14),
-                    SegmentedButton<bool>(
-                      emptySelectionAllowed: true,
-                      showSelectedIcon: false,
-                      segments: [
-                        ButtonSegment(
-                          value: true,
-                          label: Text(AppStrings.tr('q_yes', l10n)),
-                        ),
-                        ButtonSegment(
-                          value: false,
-                          label: Text(AppStrings.tr('q_no', l10n)),
-                        ),
-                      ],
-                      selected: selected == null
-                          ? const <bool>{}
-                          : <bool>{selected},
-                      onSelectionChanged: (selection) =>
-                          _answer(question, selection.first),
-                    ),
-                  ],
-                ),
-              );
-            },
+        Text(
+          AppStrings.trf('q_question_n', l10n, {'n': '${currentIndex + 1}'}),
+          style: Theme.of(context).textTheme.labelLarge?.copyWith(
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
+        ),
+        const SizedBox(height: 10),
+        Expanded(
+          child: AppSurface(
+            padding: EdgeInsets.zero,
+            child: SingleChildScrollView(
+              controller: _questionScrollController,
+              padding: const EdgeInsets.all(22),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    question.domain?.toUpperCase() ?? '',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    question.questionForLanguage(l10n?.languageCode),
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 24),
+                  SegmentedButton<bool>(
+                    emptySelectionAllowed: true,
+                    showSelectedIcon: false,
+                    segments: [
+                      ButtonSegment(
+                        value: true,
+                        label: Text(AppStrings.tr('q_yes', l10n)),
+                      ),
+                      ButtonSegment(
+                        value: false,
+                        label: Text(AppStrings.tr('q_no', l10n)),
+                      ),
+                    ],
+                    selected: selected == null
+                        ? const <bool>{}
+                        : <bool>{selected},
+                    onSelectionChanged: (selection) =>
+                        _answer(question, selection.first),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 16),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: currentIndex == 0
+                    ? null
+                    : () => _showQuestion(currentIndex - 1),
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: Text(AppStrings.tr('q_previous', l10n)),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: selected == null
+                    ? null
+                    : () {
+                        if (isLastQuestion) {
+                          _finish(profile?.childAgeMonths);
+                        } else {
+                          _showQuestion(currentIndex + 1);
+                        }
+                      },
+                icon: Icon(
+                  isLastQuestion
+                      ? Icons.arrow_forward_rounded
+                      : Icons.navigate_next_rounded,
+                ),
+                label: Text(
+                  isLastQuestion
+                      ? AppStrings.tr('q_next', l10n)
+                      : AppStrings.tr('q_next_question', l10n),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

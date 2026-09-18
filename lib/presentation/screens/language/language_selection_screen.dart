@@ -6,7 +6,7 @@ import '../../../core/l10n/app_strings.dart';
 import '../../providers/locale_provider.dart';
 import '../../widgets/app_ui.dart';
 
-/// First-run language gate — English or Hindi.
+/// First-run English or Hindi language picker.
 ///
 /// The router redirects here while [appLocaleProvider] is null; picking a
 /// language persists it and sends the worker home. Both cards are always
@@ -64,7 +64,7 @@ class LanguageSelectionScreen extends ConsumerWidget {
                 title: 'हिन्दी',
                 subtitle: 'ऐप हिन्दी में इस्तेमाल करें',
                 icon: Icons.record_voice_over_rounded,
-                selected: locale == null || locale.languageCode == 'hi',
+                selected: locale?.languageCode == 'hi',
                 onTap: () => _pick(ref, context, const Locale('hi')),
               ),
             ],

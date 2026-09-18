@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../presentation/providers/locale_provider.dart';
 import '../presentation/screens/child_profile/child_profile_screen.dart';
 import '../presentation/screens/consent/consent_screen.dart';
+import '../presentation/screens/developmental_goals/developmental_goals_screen.dart';
 import '../presentation/screens/elicitation/elicitation_screen.dart';
 import '../presentation/screens/history/result_history_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
@@ -25,6 +26,10 @@ final appRoutes = <GoRoute>[
   GoRoute(
     path: '/child-profile',
     builder: (context, state) => const ChildProfileScreen(),
+  ),
+  GoRoute(
+    path: '/developmental-goals',
+    builder: (context, state) => const DevelopmentalGoalsScreen(),
   ),
   GoRoute(
     path: '/questionnaire',

@@ -15,8 +15,8 @@ import '../../widgets/app_ui.dart';
 
 /// Step 3 of the screening flow — recorded parent consent.
 ///
-/// Plays the bundled Hindi consent statement, then asks the worker to
-/// confirm "माता-पिता ने सहमति दी". The confirm button stays disabled until
+/// Plays the bundled consent statement for the selected language, then asks
+/// the worker to confirm consent. The confirm button stays disabled until
 /// the audio has been played at least once, and no other affordance leads
 /// forward — the consent gate. On confirm a timestamped row is written to
 /// `consent_logs` (with `session_id` NULL; it is backfilled when the

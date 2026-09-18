@@ -3,35 +3,31 @@ import 'dart:ui';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// The app's display language.
-///
-/// `null` means the worker has not chosen yet — the router redirects to the
-/// language picker until [select] is called. The choice persists under
-/// `app_locale` in SharedPreferences and is restored by [loadSaved] at app
-/// start. Hindi is the default when nothing is stored (and in tests, where
-/// the picker would otherwise swallow every screen).
+/// The persisted English or Hindi app language.
 class AppLocaleNotifier extends StateNotifier<Locale?> {
-  /// Default constructor: Hindi, used by the base provider and by tests.
-  AppLocaleNotifier({Locale? initial}) : super(initial ?? const Locale('hi'));
+  AppLocaleNotifier({Locale? initial}) : super(initial ?? const Locale('en'));
 
   /// First-run state: no choice yet, so the router shows the picker.
   AppLocaleNotifier.undecided() : super(null);
 
   static const _prefKey = 'app_locale';
 
-  /// Reads the persisted choice; `null` when the worker has never picked.
+  /// Returns the persisted supported locale, or null on first launch.
   static Future<Locale?> loadSaved() async {
     final prefs = await SharedPreferences.getInstance();
     final code = prefs.getString(_prefKey);
-    if (code == null) return null;
-    return Locale(code);
+    if (code != 'en' && code != 'hi') return null;
+    return Locale(code!);
   }
 
-  /// Persists and applies [locale] (`en` or `hi`).
+  /// Applies and persists English or Hindi.
   Future<void> select(Locale locale) async {
-    state = locale;
+    final selected = locale.languageCode == 'hi'
+        ? const Locale('hi')
+        : const Locale('en');
+    state = selected;
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_prefKey, locale.languageCode);
+    await prefs.setString(_prefKey, selected.languageCode);
   }
 
   /// Clears the saved choice so the picker shows again (used by the
