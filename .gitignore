@@ -1,0 +1,107 @@
+# ──────────────────────────────────────
+# Flutter / Dart
+# ──────────────────────────────────────
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+/coverage/
+**/doc/api/
+**/ios/Flutter/.last_build_id
+
+# Generated files
+*.g.dart
+*.freezed.dart
+*.mocks.dart
+*.config.dart
+
+# Symbolication & obfuscation
+app.*.symbols
+app.*.map.json
+
+# ──────────────────────────────────────
+# Android
+# ──────────────────────────────────────
+**/android/**/gradle-wrapper.jar
+**/android/.gradle
+**/android/captures/
+**/android/gradlew
+**/android/gradlew.bat
+**/android/local.properties
+**/android/**/GeneratedPluginRegistrant.java
+**/android/app/debug/
+**/android/app/profile/
+**/android/app/release/
+**/android/key.properties
+*.jks
+*.keystore
+
+# ──────────────────────────────────────
+# iOS (future-proofing)
+# ──────────────────────────────────────
+**/ios/**/*.mode1v3
+**/ios/**/*.mode2v3
+**/ios/**/*.moved-aside
+**/ios/**/*.pbxuser
+**/ios/**/*.perspectivev3
+**/ios/**/project.xcworkspace/
+**/ios/**/.symlinks/
+**/ios/**/Pods/
+**/ios/**/Flutter/App.framework
+**/ios/**/Flutter/Flutter.framework
+**/ios/**/Flutter/Flutter.podspec
+**/ios/**/Flutter/Generated.xcconfig
+**/ios/**/Flutter/ephemeral/
+
+# ──────────────────────────────────────
+# Next.js Dashboard (dashboard/)
+# ──────────────────────────────────────
+dashboard/node_modules/
+dashboard/.next/
+dashboard/out/
+dashboard/build/
+dashboard/.vercel
+dashboard/*.tsbuildinfo
+dashboard/next-env.d.ts
+
+# ──────────────────────────────────────
+# IDE
+# ──────────────────────────────────────
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# ──────────────────────────────────────
+# OS files
+# ──────────────────────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# ──────────────────────────────────────
+# Environment & secrets
+# ──────────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ──────────────────────────────────────
+# Misc
+# ──────────────────────────────────────
+.firecrawl/
+*.class
+*.log
+*.pyc
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
