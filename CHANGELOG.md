@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added placeholder screens for elicitation, processing, result and referral with widget tests.
+Completes the screening flow as navigable placeholders, including the three timed protocol rows and the risk-band legend.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added shared UI widgets plus placeholder screens for child profile, questionnaire and consent, each with a widget test.
 Builds the first half of the screening flow as navigable Hindi-first placeholders styled with the new theme.
 
