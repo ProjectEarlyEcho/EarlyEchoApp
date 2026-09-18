@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added a rule to the agent working agreement requiring minimum relevant test coverage per change and non-redundant CI tests.
+Keeps future test and workflow additions focused on what each change actually exercises.
+
+### 2026-09-18 - Mathew Joseph - pending
 Scaffolded the Flutter app skeleton (models, scoring engine, referral text builder) with unit tests and added a GitHub Actions CI workflow.
 Every push and pull request to main now runs format checks, static analysis, and the test suite; main pushes also build a release APK artifact.
 
