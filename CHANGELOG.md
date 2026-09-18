@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Devadathan M R - pending
+Removed inherited legacy-product references from documentation and source comments.
+Keeps the repository's current product language consistent across web and mobile code.
+
+### 2026-09-19 - Devadathan M R - pending
 Aligned the web care portal with the mobile app's warm saffron, teal, and ivory visual language.
 Dashboard cards, controls, status treatments, authentication screens, and responsive layouts now share the same accessible design system.
 
@@ -21,7 +25,7 @@ Merged the parent and clinician dashboard with the mobile screening backend sche
 The care portal and mobile screening records now coexist without schema conflicts.
 
 ### 2026-09-18 - Mathew Joseph
-Aligned the screening flow with MozhiMuthal: added the complete MyChild questionnaire engine and dedicated age-based CDC developmental goals, fixed locale-aware English/Hindi rendering, and passed child age into native audio analysis.
+Aligned the screening flow with the complete developmental question bank and dedicated age-based CDC developmental goals, fixed locale-aware English/Hindi rendering, and passed child age into native audio analysis.
 Added per-activity voice skips plus real locale-selected Hindi and English parental-consent audio, each shorter than 15 seconds.
 
 ### 2026-09-18 - Mathew Joseph

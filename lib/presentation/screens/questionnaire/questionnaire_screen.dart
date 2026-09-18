@@ -10,7 +10,7 @@ import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
 
-/// Loads the complete MozhiMuthal developmental question bank.
+/// Loads the complete developmental question bank.
 ///
 /// Overridable so tests can substitute a hermetic loader.
 final milestoneQuestionsLoaderProvider =
