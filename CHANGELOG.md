@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added SessionRepository with CRUD over the sessions table plus consent-log writes for the audit trail.
+The app can now save screenings, query history newest-first, track the unsynced queue, and record timestamped parental consent.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added a SQLite database helper that opens earlyecho.db at version 1 with sessions and consent_logs tables and foreign keys enabled.
 Screening sessions now have a durable on-device store whose schema mirrors the cloud columns, plus a consent audit trail.
 
