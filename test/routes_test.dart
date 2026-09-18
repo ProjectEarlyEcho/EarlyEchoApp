@@ -17,6 +17,7 @@ import 'package:earlyecho/presentation/screens/referral/referral_screen.dart';
 import 'package:earlyecho/presentation/screens/result/result_screen.dart';
 import 'package:earlyecho/presentation/screens/settings/settings_screen.dart';
 import 'package:earlyecho/services/consent_audio_service.dart';
+import 'package:earlyecho/services/elicitation_audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +29,16 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 class _FakeConsentAudioPlayer implements ConsentAudioPlayer {
   @override
   Future<void> play() async {}
+
+  @override
+  Future<void> stop() async {}
+}
+
+/// Same idea for the per-protocol instruction clips on the elicitation
+/// screen — real playback is stubbed out off-device.
+class _FakeElicitationAudioPlayer implements ElicitationAudioPlayer {
+  @override
+  Future<void> playFor(String protocolKey) async {}
 
   @override
   Future<void> stop() async {}
@@ -56,6 +67,9 @@ void main() {
       overrides: [
         milestoneQuestionsLoaderProvider.overrideWithValue(testLoader),
         consentAudioPlayerProvider.overrideWithValue(_FakeConsentAudioPlayer()),
+        elicitationAudioPlayerProvider.overrideWithValue(
+          _FakeElicitationAudioPlayer(),
+        ),
         sessionRepositoryProvider.overrideWithValue(
           SessionRepository(helper: helper),
         ),
@@ -130,7 +144,22 @@ void main() {
     // statement has been played once.
     await tapNext('सहमति का ऑडियो सुनाएँ', ConsentScreen);
     await tapNext('माता-पिता ने सहमति दी', ElicitationScreen);
-    await tapNext('रिकॉर्डिंग शुरू करें', ProcessingScreen);
+
+    // The guided protocols run on a real countdown — tap to start each,
+    // then pump its full duration so the sequence auto-advances.
+    Future<void> runProtocol(String label, int seconds) async {
+      await tester.tap(find.text(label));
+      await tester.pump();
+      await tester.pump(Duration(seconds: seconds));
+      await tester.pump();
+    }
+
+    await runProtocol('रिकॉर्डिंग शुरू करें', 60);
+    await runProtocol('अगली गतिविधि शुरू करें', 80);
+    await runProtocol('अगली गतिविधि शुरू करें', 60);
+    await tester.pumpAndSettle();
+    expect(find.byType(ProcessingScreen), findsOneWidget);
+
     await tapNext('परिणाम देखें', ResultScreen);
     await tapNext('रेफरल देखें', ReferralScreen);
 

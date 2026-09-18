@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Replaced the elicitation placeholder with the guided three-protocol sequence: worker-tapped starts, per-protocol Hindi instruction audio, explicit countdown ring, protocol X/3 plus overall progress, and a decorative waveform; a testable ElicitationController owns sequencing while the widget drives one-second ticks.
+Finishing all three protocols records the §5.1 protocol_timings onto the session and routes to /processing; playback failures degrade to the on-screen instruction and never block the flow.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added SessionState.protocolTimings plus recordProtocolTimings, carrying per-protocol capture windows in the §5.1 contract shape ([{'protocol': 'rattle', 'start_ms': 0, 'end_ms': 60000}, ...]).
 The guided elicitation sequence can now hand the native audio pipeline its timing contract without breaking any existing session state.
 
