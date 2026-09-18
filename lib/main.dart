@@ -1,33 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'core/routes.dart';
+import 'core/theme.dart';
 
 void main() {
-  runApp(const EarlyEchoApp());
+  runApp(const ProviderScope(child: EarlyEchoApp()));
 }
 
+/// Root of the EarlyEcho app — a routed shell over the placeholder screens.
+///
+/// Hindi-first UI for Anganwadi workers; theme and navigation live in
+/// `lib/core`.
 class EarlyEchoApp extends StatelessWidget {
   const EarlyEchoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'EarlyEcho',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.teal),
-        useMaterial3: true,
-      ),
-      home: const HomeScreen(),
-    );
-  }
-}
-
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('EarlyEcho')),
-      body: const Center(child: Text('Acoustic biomarker screening')),
+      theme: EarlyEchoTheme.lightTheme,
+      darkTheme: EarlyEchoTheme.darkTheme,
+      themeMode: ThemeMode.system,
+      routerConfig: goRouter,
     );
   }
 }

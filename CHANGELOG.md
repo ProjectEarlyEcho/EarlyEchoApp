@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Wired the app shell together: a GoRouter with all ten routes, a ProviderScope-wrapped MaterialApp.router entry point, and router widget tests.
+The app now boots into the home screen and every placeholder is reachable; a smoke test taps through the full seven-step screening flow.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added placeholder screens for home, result history and settings, each with a widget test.
 Completes the set of app destinations: the home screen links into the screening flow, past results and settings.
 
