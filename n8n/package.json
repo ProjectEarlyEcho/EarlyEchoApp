@@ -1,0 +1,13 @@
+{
+  "name": "earlyecho-n8n-automations",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "validate": "node scripts/validate-workflows.mjs",
+    "validate:compose": "node scripts/validate-compose.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "test:database": "node scripts/test-postgres.mjs",
+    "test:runtime": "node scripts/test-n8n-import.mjs",
+    "test:all": "npm run validate && npm run validate:compose && npm test && npm run test:database && npm run test:runtime"
+  }
+}

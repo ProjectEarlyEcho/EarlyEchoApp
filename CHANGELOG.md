@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Devadathan M R - pending
+Added local n8n workflows for parent referral and follow-up reminders, 24-hour appointment reminders, and clinician appointment-request digests.
+Introduced a service-only, idempotent Supabase outbox with Docker-based migration, workflow-import, local-stack, and CI validation.
+
+### 2026-09-19 - Devadathan M R - pending
 Removed inherited legacy-product references from documentation and source comments.
 Keeps the repository's current product language consistent across web and mobile code.
 

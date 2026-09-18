@@ -37,6 +37,24 @@ jobs:
       - name: Build dashboard
         run: npm run build
 
+  n8n-automations:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: n8n
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Validate care automations
+        run: npm run test:all
+
   analyze-and-test:
     runs-on: ubuntu-latest
 

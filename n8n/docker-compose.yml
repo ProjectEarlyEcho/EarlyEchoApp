@@ -1,0 +1,38 @@
+name: earlyecho-automations
+
+services:
+  n8n:
+    image: n8nio/n8n:2.39.8
+    restart: unless-stopped
+    env_file:
+      - ${N8N_ENV_FILE:-.env}
+    environment:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY}
+      N8N_HOST: ${N8N_HOST:-localhost}
+      N8N_PORT: ${N8N_PORT:-5678}
+      N8N_PROTOCOL: ${N8N_PROTOCOL:-http}
+      N8N_SECURE_COOKIE: "false"
+      N8N_DIAGNOSTICS_ENABLED: ${N8N_DIAGNOSTICS_ENABLED:-false}
+      N8N_PERSONALIZATION_ENABLED: ${N8N_PERSONALIZATION_ENABLED:-false}
+      GENERIC_TIMEZONE: ${GENERIC_TIMEZONE:-Asia/Kolkata}
+      TZ: ${TZ:-Asia/Kolkata}
+      SUPABASE_URL: ${SUPABASE_URL}
+      SUPABASE_SERVICE_ROLE_KEY: ${SUPABASE_SERVICE_ROLE_KEY}
+      REMINDER_FROM_EMAIL: ${REMINDER_FROM_EMAIL}
+    ports:
+      - "5678:5678"
+    volumes:
+      - n8n_data:/home/node/.n8n
+      - ./workflows:/files/workflows:ro
+    depends_on:
+      - mailpit
+
+  # Local SMTP sink. It lets the workflow be tested without delivering email.
+  mailpit:
+    image: axllent/mailpit:v1.28.2
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+
+volumes:
+  n8n_data:

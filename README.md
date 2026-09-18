@@ -47,6 +47,7 @@ earlyecho/
 │       ├── app/            # Pages (overview, districts, screenings)
 │       ├── components/     # Sidebar, stat cards, tables
 │       └── lib/            # Utilities, mock data
+├── n8n/                    # Local reminder and clinician-priority automations
 └── supabase/               # Database schema
 ```
 
@@ -98,6 +99,11 @@ cd dashboard
 npm install
 npm run dev
 ```
+
+### Care automations
+
+The local n8n workflows and their setup, delivery safeguards, and validation
+commands are documented in [n8n/README.md](n8n/README.md).
 
 ## Team
 

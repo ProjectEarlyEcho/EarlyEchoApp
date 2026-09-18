@@ -1,0 +1,236 @@
+{
+  "name": "EarlyEcho — Clinician priority digest",
+  "id": "b91d1198-47c5-407a-a697-10b5fcb10891",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 30 17 * * 1-5"
+            }
+          ]
+        }
+      },
+      "id": "c97131ed-ac5e-4b1c-9f43-8eb51b74696a",
+      "name": "Weekdays 5:30 PM",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -880,
+        80
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "4b3462d9-8f20-477a-a35b-4f74fb5029f7",
+      "name": "Manual test",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL + '/rest/v1/rpc/queue_automation_notifications' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_kinds: ['CLINICIAN_PRIORITY_DIGEST'], p_as_of: $now.toISO() }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "b1d28f1b-aa8e-4ded-bf1a-850187d85237",
+      "name": "Queue clinician digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -620,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL + '/rest/v1/rpc/claim_automation_notifications' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_kinds: ['CLINICIAN_PRIORITY_DIGEST'], p_limit: 50 }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "15ba94d1-6d1a-413c-88da-d93715ecc3e2",
+      "name": "Claim clinician digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -360,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "email",
+        "operation": "send",
+        "fromEmail": "={{ $env.REMINDER_FROM_EMAIL }}",
+        "toEmail": "={{ $json.recipient_email }}",
+        "subject": "={{ $json.subject }}",
+        "emailFormat": "text",
+        "text": "={{ $json.body }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "f41a6e42-f754-4e0a-bb5c-90ac2735487e",
+      "name": "Send clinician digest",
+      "type": "n8n-nodes-base.emailSend",
+      "typeVersion": 2.1,
+      "position": [
+        -90,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.SUPABASE_URL + '/rest/v1/rpc/mark_automation_notification_sent' }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "apikey",
+              "value": "={{ $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Authorization",
+              "value": "={{ 'Bearer ' + $env.SUPABASE_SERVICE_ROLE_KEY }}"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ p_notification_id: $('Claim clinician digest').item.json.notification_id }) }}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "bced9215-9e68-44f5-9775-a7117ff4137d",
+      "name": "Mark clinician digest sent",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        190,
+        150
+      ]
+    }
+  ],
+  "connections": {
+    "Weekdays 5:30 PM": {
+      "main": [
+        [
+          {
+            "node": "Queue clinician digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual test": {
+      "main": [
+        [
+          {
+            "node": "Queue clinician digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Queue clinician digest": {
+      "main": [
+        [
+          {
+            "node": "Claim clinician digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claim clinician digest": {
+      "main": [
+        [
+          {
+            "node": "Send clinician digest",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send clinician digest": {
+      "main": [
+        [
+          {
+            "node": "Mark clinician digest sent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {},
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "b91d1198-47c5-407a-a697-10b5fcb10891",
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
