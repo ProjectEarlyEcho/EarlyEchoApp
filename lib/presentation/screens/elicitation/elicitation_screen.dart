@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants.dart';
+import '../../../services/audio_pipeline_service.dart';
 import '../../../services/elicitation_audio_service.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
@@ -55,9 +56,30 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
   /// Starts the current protocol's countdown and plays its spoken Hindi
   /// instruction. Playback is best-effort — the on-screen instruction is
   /// the fallback when audio is unavailable.
+  ///
+  /// The first protocol also opens microphone capture through the native
+  /// pipeline; permission denial or capture failure never blocks the
+  /// guided sequence — an empty capture simply yields an INCOMPLETE
+  /// analysis with a retry prompt downstream.
   Future<void> _startProtocol() async {
     final state = ref.read(elicitationControllerProvider);
     if (state.running || state.completed) return;
+    if (state.protocolIndex == 0) {
+      try {
+        await AudioPipelineService.requestPermission();
+        await AudioPipelineService.startRecording();
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'माइक्रोफ़ोन उपलब्ध नहीं है — रिकॉर्डिंग के बिना जारी।',
+              ),
+            ),
+          );
+        }
+      }
+    }
     ref.read(elicitationControllerProvider.notifier).start();
     try {
       await _player.playFor(state.current.key);
@@ -89,6 +111,15 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
     ref.listen<ElicitationState>(elicitationControllerProvider, (prev, next) {
       if (!next.completed || (prev?.completed ?? false)) return;
       _tickTimer?.cancel();
+      // Capture teardown is best-effort — a missing mic or channel must
+      // never surface as an unhandled async error here.
+      unawaited(
+        Future(() async {
+          try {
+            await AudioPipelineService.stopRecording();
+          } catch (_) {}
+        }),
+      );
       ref.read(sessionProvider.notifier).recordProtocolTimings(next.timings);
       context.push('/processing');
     });

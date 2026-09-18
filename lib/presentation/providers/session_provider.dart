@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../data/models/biomarker_result.dart';
 import '../../data/models/child_profile.dart';
+import '../../data/models/session_features.dart';
 import '../../domain/milestone_engine.dart';
 
 /// In-progress screening session, shared across the flow screens.
@@ -18,6 +20,9 @@ class SessionState {
     this.consentedAt,
     this.consentLogId,
     this.protocolTimings = const [],
+    this.features,
+    this.biomarkerResult,
+    this.pipelineResponse = const {},
   });
 
   /// Enrollment details from the child profile screen.
@@ -45,6 +50,18 @@ class SessionState {
   /// handed to the native audio pipeline when the recording is analysed.
   final List<Map<String, Object>> protocolTimings;
 
+  /// Parsed feature vector returned by the native pipeline.
+  final SessionFeatures? features;
+
+  /// Scored risk classification derived from [features]. Null until the
+  /// pipeline response lands; [BiomarkerResult.incomplete] marks a session
+  /// that must be retried rather than screened.
+  final BiomarkerResult? biomarkerResult;
+
+  /// Raw channel payload kept for `audio_source_used` and `decision_trace`
+  /// when the session is persisted.
+  final Map<String, dynamic> pipelineResponse;
+
   SessionState copyWith({
     ChildProfile? childProfile,
     Map<String, bool>? milestoneAnswers,
@@ -53,6 +70,9 @@ class SessionState {
     DateTime? consentedAt,
     String? consentLogId,
     List<Map<String, Object>>? protocolTimings,
+    SessionFeatures? features,
+    BiomarkerResult? biomarkerResult,
+    Map<String, dynamic>? pipelineResponse,
   }) {
     return SessionState(
       childProfile: childProfile ?? this.childProfile,
@@ -62,6 +82,9 @@ class SessionState {
       consentedAt: consentedAt ?? this.consentedAt,
       consentLogId: consentLogId ?? this.consentLogId,
       protocolTimings: protocolTimings ?? this.protocolTimings,
+      features: features ?? this.features,
+      biomarkerResult: biomarkerResult ?? this.biomarkerResult,
+      pipelineResponse: pipelineResponse ?? this.pipelineResponse,
     );
   }
 }
@@ -109,6 +132,20 @@ class SessionNotifier extends StateNotifier<SessionState> {
   /// elicitation sequence, ready for the native audio pipeline.
   void recordProtocolTimings(List<Map<String, Object>> timings) {
     state = state.copyWith(protocolTimings: timings);
+  }
+
+  /// Stores the analysed pipeline outcome: parsed features, the scored
+  /// result, and the raw channel payload kept for persistence.
+  void recordAnalysisResult({
+    required SessionFeatures features,
+    required BiomarkerResult result,
+    required Map<String, dynamic> rawResponse,
+  }) {
+    state = state.copyWith(
+      features: features,
+      biomarkerResult: result,
+      pipelineResponse: rawResponse,
+    );
   }
 
   void reset() {

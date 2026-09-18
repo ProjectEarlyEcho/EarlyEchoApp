@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added the Dart-side audio pipeline service (requestPermission/startRecording/stopRecording/runPipeline + waveform EventChannel stream) and extended session state to carry the parsed features, scored result, and raw channel payload.
+The elicitation flow now opens mic capture on the first protocol and releases it when the sequence completes, feeding the recorded protocol timings into the pipeline request.
+
+### 2026-09-18 - Mathew Joseph - pending
 Wired the audio pipeline method channel in MainActivity: `requestPermission`, `startRecording`, `stopRecording`, and `runPipeline` return the full feature-vector contract (VTTL, PFV semitone SD + z-score, CVR, flags, quality reasons, 256-point waveform, decision trace), with a waveform EventChannel for visual levels.
 Recording runs a rolling-window loop on a single-thread executor with generation guards, low-memory window selection, and permission checks; `analysis_status` is COMPLETE only when voiced/child/transition minimums are met.
 
