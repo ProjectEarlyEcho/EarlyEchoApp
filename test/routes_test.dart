@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:earlyecho/core/routes.dart';
 import 'package:earlyecho/core/theme.dart';
+import 'package:earlyecho/domain/milestone_engine.dart';
 import 'package:earlyecho/presentation/screens/child_profile/child_profile_screen.dart';
 import 'package:earlyecho/presentation/screens/consent/consent_screen.dart';
 import 'package:earlyecho/presentation/screens/elicitation/elicitation_screen.dart';
@@ -16,8 +19,19 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 void main() {
+  /// Hermetic milestone loader — the screen's default loader uses the asset
+  /// bundle, which only completes on the first call inside widget tests.
+  Future<List<MilestoneQuestion>> testLoader() async {
+    return MilestoneEngine.parseQuestions(
+      File('assets/data/milestones_hi.json').readAsStringSync(),
+    );
+  }
+
   Widget buildTestApp(String initialLocation) {
     return ProviderScope(
+      overrides: [
+        milestoneQuestionsLoaderProvider.overrideWithValue(testLoader),
+      ],
       child: MaterialApp.router(
         theme: EarlyEchoTheme.lightTheme,
         routerConfig: GoRouter(

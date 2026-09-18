@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Replaced the questionnaire placeholder with a CDC milestone list loaded from the bundled Hindi asset, age-filtered per enrolled child, with हाँ/नहीं segments, a skip path, and a finish that stores the context-only summary.
+Answers and the milestone summary now flow through the session provider into the consent step without ever blocking navigation.
+
+### 2026-09-18 - Mathew Joseph - pending
 Replaced the child-profile placeholder with the real enrollment form: optional name, age in months validated via ChildProfile.isAgeValid, Anganwadi ID, state dropdown, district and worker name.
 A valid form writes the profile to the session provider and continues to the questionnaire; the routes walkthrough now fills the form before advancing.
 

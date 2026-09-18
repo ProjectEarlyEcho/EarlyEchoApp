@@ -124,15 +124,18 @@ class MilestoneEngine {
 
   /// Tally for [answers] over the age-applicable subset of [questions].
   ///
-  /// Answers for questions outside the child's age window are ignored.
-  /// Status is [MilestoneStatus.warning] when the concern count reaches
+  /// Answers for questions outside the child's age window are ignored;
+  /// a null [childAgeMonths] scores against the full list. Status is
+  /// [MilestoneStatus.warning] when the concern count reaches
   /// [warningConcernThreshold]; empty answers therefore score normal.
   static MilestoneSummary summarize({
     required List<MilestoneQuestion> questions,
     required Map<String, bool> answers,
-    required int childAgeMonths,
+    required int? childAgeMonths,
   }) {
-    final applicable = questionsForAge(questions, childAgeMonths);
+    final applicable = childAgeMonths == null
+        ? questions
+        : questionsForAge(questions, childAgeMonths);
     var yes = 0;
     var no = 0;
     for (final question in applicable) {

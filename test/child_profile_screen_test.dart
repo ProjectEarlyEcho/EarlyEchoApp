@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:earlyecho/core/routes.dart';
 import 'package:earlyecho/core/theme.dart';
+import 'package:earlyecho/domain/milestone_engine.dart';
 import 'package:earlyecho/presentation/providers/session_provider.dart';
 import 'package:earlyecho/presentation/screens/child_profile/child_profile_screen.dart';
 import 'package:earlyecho/presentation/screens/questionnaire/questionnaire_screen.dart';
@@ -90,7 +93,15 @@ void main() {
     tester,
   ) async {
     useTallSurface(tester);
-    final container = ProviderContainer();
+    final container = ProviderContainer(
+      overrides: [
+        milestoneQuestionsLoaderProvider.overrideWithValue(() async {
+          return MilestoneEngine.parseQuestions(
+            File('assets/data/milestones_hi.json').readAsStringSync(),
+          );
+        }),
+      ],
+    );
     addTearDown(container.dispose);
     await tester.pumpWidget(
       UncontrolledProviderScope(
