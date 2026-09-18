@@ -1,0 +1,26 @@
+[
+  {
+    "name": "District Early Intervention Center, Indore",
+    "state": "Madhya Pradesh",
+    "district": "Indore",
+    "contact": "deic.indore@health.mp.gov.in"
+  },
+  {
+    "name": "District Early Intervention Center, Bhopal",
+    "state": "Madhya Pradesh",
+    "district": "Bhopal",
+    "contact": "deic.bhopal@health.mp.gov.in"
+  },
+  {
+    "name": "District Early Intervention Center, Thrissur",
+    "state": "Kerala",
+    "district": "Thrissur",
+    "contact": "deic.thrissur@health.kerala.gov.in"
+  },
+  {
+    "name": "District Early Intervention Center, Pune",
+    "state": "Maharashtra",
+    "district": "Pune",
+    "contact": "deic.pune@health.mah.gov.in"
+  }
+]
