@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added placeholder screens for home, result history and settings, each with a widget test.
+Completes the set of app destinations: the home screen links into the screening flow, past results and settings.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added placeholder screens for elicitation, processing, result and referral with widget tests.
 Completes the screening flow as navigable placeholders, including the three timed protocol rows and the risk-band legend.
 
