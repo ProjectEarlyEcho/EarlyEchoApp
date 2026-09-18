@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import 'pipeline_test_helpers.dart';
+
 /// `just_audio` has no platform channel in widget tests, so the screen
 /// talks to this stub through [elicitationAudioPlayerProvider].
 class _FakeElicitationAudioPlayer implements ElicitationAudioPlayer {
@@ -29,6 +31,7 @@ void main() {
   late ProviderContainer container;
 
   Widget buildApp() {
+    installMockPipelineChannel();
     audio = _FakeElicitationAudioPlayer();
     container = ProviderContainer(
       overrides: [elicitationAudioPlayerProvider.overrideWithValue(audio)],
@@ -125,7 +128,12 @@ void main() {
     expect(audio.played, ['rattle', 'toy_hide', 'imitate']);
     await tester.pump(const Duration(seconds: 60));
     await tester.pump();
-    await tester.pumpAndSettle();
+    // The processing screen shows an indeterminate spinner, so a timed
+    // pump series is used instead of pumpAndSettle (which never settles
+    // while it animates).
+    for (var i = 0; i < 10; i++) {
+      await tester.pump(const Duration(milliseconds: 100));
+    }
 
     expect(find.byType(ProcessingScreen), findsOneWidget);
     expect(container.read(sessionProvider).protocolTimings, [

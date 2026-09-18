@@ -24,6 +24,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
+import 'pipeline_test_helpers.dart';
+
 /// `just_audio` needs a platform channel widget tests do not have, so the
 /// consent screen talks to this stub through [consentAudioPlayerProvider].
 class _FakeConsentAudioPlayer implements ConsentAudioPlayer {
@@ -99,14 +101,32 @@ void main() {
 
   for (final entry in routeCases.entries) {
     testWidgets('route ${entry.key} builds ${entry.value}', (tester) async {
+      installMockPipelineChannel(
+        // A never-resolving pipeline keeps the processing screen mid-analysis
+        // so it is still visible when the assertions run.
+        runPipelineResponse: entry.key == '/processing'
+            ? null
+            : completeRedPipelineResponse,
+      );
       await tester.pumpWidget(buildTestApp(entry.key));
-      await tester.pumpAndSettle();
+      if (entry.key == '/processing') {
+        // Indeterminate spinner: pumpAndSettle would time out, so run a
+        // fixed pump series while the never-completing analysis hangs.
+        for (var i = 0; i < 8; i++) {
+          await tester.pump(const Duration(milliseconds: 100));
+        }
+      } else {
+        await tester.pumpAndSettle();
+      }
 
       expect(find.byType(entry.value), findsOneWidget);
     });
   }
 
   testWidgets('tapping next walks the whole screening flow', (tester) async {
+    installMockPipelineChannel(
+      runPipelineResponse: completeRedPipelineResponse,
+    );
     // Tall surface so the lazy enrollment form builds every field at once.
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1.0;
@@ -157,11 +177,11 @@ void main() {
     await runProtocol('रिकॉर्डिंग शुरू करें', 60);
     await runProtocol('अगली गतिविधि शुरू करें', 80);
     await runProtocol('अगली गतिविधि शुरू करें', 60);
+    // Processing auto-runs the mocked pipeline and navigates itself to the
+    // result — pumpAndSettle walks both transitions and lands on Result.
     await tester.pumpAndSettle();
-    expect(find.byType(ProcessingScreen), findsOneWidget);
-
-    await tapNext('परिणाम देखें', ResultScreen);
-    await tapNext('रेफरल देखें', ReferralScreen);
+    expect(find.byType(ResultScreen), findsOneWidget);
+    await tapNext('रेफरल बनाएँ', ReferralScreen);
 
     // Referral is the last step — its button returns home.
     await tapNext('होम पर लौटें', HomeScreen);
