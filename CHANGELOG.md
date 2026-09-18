@@ -4,6 +4,10 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-09-18 - Devadathan M R - pending
+Added the EarlyEcho Next.js care portal with parent and clinician workspaces for screening summaries, appointments, and secure care-team messaging.
+Introduced Supabase role-based access controls and row-level security, plus dashboard checks in continuous integration.
+
 ### 2026-09-18 - Mathew Joseph - pending
 Added a rule to the agent working agreement requiring minimum relevant test coverage per change and non-redundant CI tests.
 Keeps future test and workflow additions focused on what each change actually exercises.

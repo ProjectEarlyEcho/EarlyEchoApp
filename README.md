@@ -33,7 +33,7 @@ Flutter App (Android)  →  Kotlin Native Pipeline  →  Scoring Engine (Dart)
 ## Project Structure
 
 ```
-mozhimuthal/
+earlyecho/
 ├── lib/                    # Flutter app
 │   ├── core/               # Theme, routes, constants
 │   ├── data/               # Models, repositories, SQLite
