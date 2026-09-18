@@ -78,6 +78,19 @@ flutter pub get
 flutter run
 ```
 
+To connect the mobile app to the same Supabase project as the dashboard, supply
+the dashboard project URL and publishable key at build or run time:
+
+```bash
+flutter run \
+      --dart-define=SUPABASE_URL=https://your-project.supabase.co \
+      --dart-define=SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+```
+
+Parents can create accounts in the app. Care-worker accounts use the dashboard
+`clinician` role and must be provisioned by an administrator with an
+`anganwadi_id`; only care workers and administrators can sync screenings.
+
 ### Dashboard
 
 ```bash
