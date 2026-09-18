@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+The processing screen now stops capture, invokes `runPipeline`, parses the feature vector via `SessionFeatures.fromChannelMap`, scores it with `ScoringEngine`, and auto-advances to the result.
+Channel failures surface a retry affordance instead of a screening outcome.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added the Dart-side audio pipeline service (requestPermission/startRecording/stopRecording/runPipeline + waveform EventChannel stream) and extended session state to carry the parsed features, scored result, and raw channel payload.
 The elicitation flow now opens mic capture on the first protocol and releases it when the sequence completes, feeding the recorded protocol timings into the pipeline request.
 

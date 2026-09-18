@@ -1,14 +1,66 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../data/models/session_features.dart';
+import '../../../domain/scoring_engine.dart';
+import '../../../services/audio_pipeline_service.dart';
+import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
 
 /// Step 5 of the screening flow — on-device analysis of the recording.
 ///
-/// Placeholder for Phase 7; the animated waveform and the method-channel
-/// call into the native audio pipeline land there.
-class ProcessingScreen extends StatelessWidget {
+/// Stops the native capture, invokes `runPipeline`, parses the feature
+/// vector with [SessionFeatures.fromChannelMap], scores it via
+/// [ScoringEngine], and forwards to `/result`. A channel failure leaves a
+/// retry affordance instead of a result — an errored analysis never
+/// produces a screening outcome.
+class ProcessingScreen extends ConsumerStatefulWidget {
   const ProcessingScreen({super.key});
+
+  @override
+  ConsumerState<ProcessingScreen> createState() => _ProcessingScreenState();
+}
+
+class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _analyze());
+  }
+
+  Future<void> _analyze() async {
+    setState(() => _error = null);
+    final session = ref.read(sessionProvider);
+    try {
+      // Capture may still be winding down; stopping is a no-op if it
+      // already ended when the last protocol finished.
+      await AudioPipelineService.stopRecording();
+      final raw = await AudioPipelineService.runPipeline(
+        childAgeMonths: session.childProfile?.childAgeMonths ?? 0,
+        protocolTimings: session.protocolTimings,
+      );
+      final features = SessionFeatures.fromChannelMap(raw);
+      final result = ScoringEngine.score(features);
+      ref
+          .read(sessionProvider.notifier)
+          .recordAnalysisResult(
+            features: features,
+            result: result,
+            rawResponse: raw,
+          );
+      if (!mounted) return;
+      context.pushReplacement('/result');
+    } on AudioPipelineException catch (e) {
+      if (mounted) setState(() => _error = e.message);
+    } catch (_) {
+      if (mounted) {
+        setState(() => _error = 'विश्लेषण पूरा नहीं हो सका।');
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,12 +102,27 @@ class ProcessingScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            'रिकॉर्ड की गई आवाज़ इसी फ़ोन पर जाँची जाएगी — इसमें '
-                            '8 से 30 सेकंड लग सकते हैं। ऑडियो कभी फ़ोन से बाहर '
-                            'नहीं जाता।',
+                            _error == null
+                                ? 'रिकॉर्ड की गई आवाज़ इसी फ़ोन पर जाँची जा '
+                                      'रही है — इसमें 8 से 30 सेकंड लग सकते हैं। '
+                                      'ऑडियो कभी फ़ोन से बाहर नहीं जाता।'
+                                : _error!,
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
+                          const SizedBox(height: 18),
+                          if (_error == null)
+                            const SizedBox(
+                              width: 40,
+                              height: 40,
+                              child: CircularProgressIndicator(strokeWidth: 3),
+                            )
+                          else
+                            Icon(
+                              Icons.error_outline_rounded,
+                              size: 40,
+                              color: scheme.error,
+                            ),
                           const SizedBox(height: 18),
                           const Wrap(
                             spacing: 8,
@@ -74,11 +141,14 @@ class ProcessingScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 16),
-              FilledButton.icon(
-                onPressed: () => context.push('/result'),
-                icon: const Icon(Icons.insights_rounded),
-                label: const Text('परिणाम देखें'),
-              ),
+              if (_error != null)
+                FilledButton.icon(
+                  onPressed: _analyze,
+                  icon: const Icon(Icons.refresh_rounded),
+                  label: const Text('दोबारा प्रयास करें'),
+                )
+              else
+                const SizedBox.shrink(),
             ],
           ),
         ),
