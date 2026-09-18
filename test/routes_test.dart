@@ -13,6 +13,7 @@ import 'package:earlyecho/presentation/screens/elicitation/elicitation_screen.da
 import 'package:earlyecho/presentation/screens/history/result_history_screen.dart';
 import 'package:earlyecho/presentation/screens/home/home_screen.dart';
 import 'package:earlyecho/presentation/screens/auth/login_screen.dart';
+import 'package:earlyecho/presentation/screens/care/care_portal_screen.dart';
 import 'package:earlyecho/presentation/screens/processing/processing_screen.dart';
 import 'package:earlyecho/presentation/screens/questionnaire/questionnaire_screen.dart';
 import 'package:earlyecho/presentation/screens/referral/referral_screen.dart';
@@ -91,6 +92,8 @@ void main() {
   final routeCases = <String, Type>{
     '/': HomeScreen,
     '/login': LoginScreen,
+    '/care': CarePortalScreen,
+    '/care/conversations/test-conversation': CareMessageThreadScreen,
     '/child-profile': ChildProfileScreen,
     '/questionnaire': QuestionnaireScreen,
     '/consent': ConsentScreen,

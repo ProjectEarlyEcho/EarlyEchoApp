@@ -123,6 +123,7 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
             stateCode: _stateCode!,
             districtCode: _districtController.text.trim(),
             workerName: _workerController.text.trim(),
+            cloudChildId: ref.read(sessionProvider).selectedCareChild?.id,
           ),
         );
     context.push('/developmental-goals');

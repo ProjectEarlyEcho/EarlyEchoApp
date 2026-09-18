@@ -54,6 +54,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       anganwadiId: profile.anganwadiId,
       workerName: profile.workerName,
       childName: profile.childName,
+      cloudChildId: profile.cloudChildId,
       childAgeMonths: profile.childAgeMonths,
       sessionDate: DateTime.now(),
       riskLevel: result.riskLevel,

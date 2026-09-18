@@ -12,7 +12,7 @@ void main() {
     return db.rawQuery('PRAGMA table_info(${DatabaseHelper.tableConsentLogs})');
   }
 
-  test('fresh databases open at v2 with a nullable session link', () async {
+  test('fresh databases open at v3 with a nullable session link', () async {
     final helper = DatabaseHelper(
       factory: databaseFactoryFfi,
       databasePath: inMemoryDatabasePath,
@@ -20,8 +20,8 @@ void main() {
     addTearDown(helper.close);
     final db = await helper.database;
 
-    expect(DatabaseHelper.databaseVersion, 2);
-    expect(await db.getVersion(), 2);
+    expect(DatabaseHelper.databaseVersion, 3);
+    expect(await db.getVersion(), 3);
 
     final columns = await consentLogColumns(db);
     final sessionCol = columns.firstWhere((c) => c['name'] == 'session_id');
@@ -35,7 +35,7 @@ void main() {
     });
   });
 
-  test('v1 databases migrate to v2 keeping consent rows intact', () async {
+  test('v1 databases migrate to v3 keeping consent rows intact', () async {
     final path = p.join(
       Directory.systemTemp.path,
       'earlyecho_v1_upgrade_test.db',
@@ -101,7 +101,7 @@ void main() {
     });
     await v1.close();
 
-    // Reopening through the helper runs the v1 -> v2 migration.
+    // Reopening through the helper runs the v1 -> v3 migration.
     final helper = DatabaseHelper(
       factory: databaseFactoryFfi,
       databasePath: path,
@@ -109,10 +109,15 @@ void main() {
     addTearDown(helper.close);
     final db = await helper.database;
 
-    expect(await db.getVersion(), 2);
+    expect(await db.getVersion(), 3);
     final columns = await consentLogColumns(db);
     final sessionCol = columns.firstWhere((c) => c['name'] == 'session_id');
     expect(sessionCol['notnull'], 0);
+    final sessionColumns = await db.rawQuery('PRAGMA table_info(sessions)');
+    expect(
+      sessionColumns.any((column) => column['name'] == 'cloud_child_id'),
+      isTrue,
+    );
 
     // The pre-existing consent row survived the table rebuild.
     final migrated = await db.query(DatabaseHelper.tableConsentLogs);

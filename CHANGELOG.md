@@ -4,6 +4,10 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-09-19 - Mathew Joseph
+Added shared mobile care workflows for assigned children, dashboard-compatible screening uploads, appointments, conversations, and clinical notes.
+Mobile screening now carries the dashboard child identifier through local storage to `screening_sessions`.
+
 ### 2026-09-19 - Devadathan M R - pending
 Removed inherited legacy-product references from documentation and source comments.
 Keeps the repository's current product language consistent across web and mobile code.

@@ -17,7 +17,7 @@ abstract class ConsentLogUploader {
   Future<void> uploadConsentLog(ConsentLog log);
 }
 
-/// Uploads a session to the Supabase `screenings` table.
+/// Uploads a session to the dashboard's shared `screening_sessions` table.
 ///
 /// Only numeric biomarker columns are sent (see [SessionModel.toJson]) —
 /// never audio and never the child's name.
@@ -27,7 +27,7 @@ class SupabaseScreeningUploader
 
   final SupabaseClient _client;
 
-  static const String table = 'screenings';
+  static const String table = 'screening_sessions';
   static const String consentTable = 'consent_logs';
 
   @override
@@ -45,7 +45,7 @@ class SupabaseScreeningUploader
     if (role != 'clinician' && role != 'admin') {
       throw StateError('Only care workers can sync screening records.');
     }
-    await _client.from(table).upsert(session.toJson());
+    await _client.from(table).insert(session.toDashboardJson());
   }
 
   @override
