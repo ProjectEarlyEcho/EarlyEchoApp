@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added just_audio plus a ConsentAudioPlayer port and provider for the bundled Hindi consent clip; assets/audio/consent_hi.mp3 is a 4-second silent placeholder standing in for the real AI4Bharat TTS recording.
+The consent screen can play the statement on-device while widget tests substitute a fake player, sidestepping platform-channel failures.
+
+### 2026-09-18 - Mathew Joseph - pending
 Bumped the local database to version 2 so `consent_logs.session_id` is nullable, migrating existing databases via a table rebuild that preserves audit rows; `ConsentLog` now allows a null session link and the repository can backfill it later.
 Consent can be recorded before the session row exists — the link attaches when the screening completes — while the foreign-key cascade still protects rows written against older sessions.
 
