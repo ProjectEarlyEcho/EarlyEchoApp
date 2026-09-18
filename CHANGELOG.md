@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added Riverpod providers for sync state: repository wiring plus a SyncNotifier exposing pending count, isSyncing, and the last sync result.
+The UI can now observe the upload queue and trigger a sync pass when connectivity returns.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added the Supabase schema for the screenings table and a matching consent_logs audit table, both with insert-only RLS policies.
 Defines the cloud sink for synced biomarker rows and consent confirmations scoped to the worker's Anganwadi JWT claim.
 
