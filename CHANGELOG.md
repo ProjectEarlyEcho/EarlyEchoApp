@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added shared UI widgets plus placeholder screens for child profile, questionnaire and consent, each with a widget test.
+Builds the first half of the screening flow as navigable Hindi-first placeholders styled with the new theme.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added the EarlyEcho app theme and shared app constants (channel name, protocol timings, age bounds, audio format).
 Establishes the worker-centric visual foundation: India-inspired saffron/teal Material 3 palette, enlarged text, and 48dp+ tap targets for outdoor use.
 
