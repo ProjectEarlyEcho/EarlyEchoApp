@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added SyncRepository that drains the unsynced queue through an injectable ScreeningUploader port backed by Supabase upserts.
+Successful uploads flip the synced flag while failures stay queued for retry; an uninitialized client reports an offline result instead of throwing.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added SessionRepository with CRUD over the sessions table plus consent-log writes for the audit trail.
 The app can now save screenings, query history newest-first, track the unsynced queue, and record timestamped parental consent.
 
