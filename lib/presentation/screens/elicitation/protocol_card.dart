@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../widgets/app_ui.dart';
 
 /// One timed elicitation activity from the screening protocol.
 ///
 /// [key] is the contract key recorded into `protocol_timings` and used to
 /// pick the bundled Hindi instruction clip (`rattle`, `toy_hide`,
-/// `imitate`). [instruction] is the exact worker-facing Hindi prompt.
+/// `imitate`). [title] and [instruction] are [AppStrings] keys resolved
+/// into the worker's language at render time.
 class ElicitationProtocol {
   const ElicitationProtocol({
     required this.key,
@@ -30,22 +32,22 @@ class ElicitationProtocol {
 const elicitationProtocols = <ElicitationProtocol>[
   ElicitationProtocol(
     key: 'rattle',
-    title: 'रैटल',
-    instruction: 'इस बच्चे को रैटल की आवाज़ सुनाएँ',
+    title: 'proto_rattle_title',
+    instruction: 'proto_rattle_instruction',
     icon: Icons.toys_rounded,
     durationSeconds: EarlyEchoConstants.rattleProtocolSeconds,
   ),
   ElicitationProtocol(
     key: 'toy_hide',
-    title: 'खिलौना छुपाना',
-    instruction: 'यह रहा! यह रहा खिलौना!',
+    title: 'proto_toy_title',
+    instruction: 'proto_toy_instruction',
     icon: Icons.visibility_rounded,
     durationSeconds: EarlyEchoConstants.toyHideProtocolSeconds,
   ),
   ElicitationProtocol(
     key: 'imitate',
-    title: 'अनुकरण',
-    instruction: 'आ... आ... आ...',
+    title: 'proto_imitate_title',
+    instruction: 'proto_imitate_instruction',
     icon: Icons.record_voice_over_rounded,
     durationSeconds: EarlyEchoConstants.imitationProtocolSeconds,
   ),
@@ -59,12 +61,17 @@ class ProtocolCard extends StatelessWidget {
     required this.protocol,
     required this.elapsedSeconds,
     required this.running,
+    required this.locale,
     this.onReplayInstruction,
   });
 
   final ElicitationProtocol protocol;
   final int elapsedSeconds;
   final bool running;
+
+  /// The app's display language for the card's title, instruction and
+  /// status labels.
+  final Locale? locale;
 
   /// Replays the spoken Hindi instruction; hidden when null.
   final VoidCallback? onReplayInstruction;
@@ -97,13 +104,13 @@ class ProtocolCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 18),
                 Text(
-                  protocol.title,
+                  AppStrings.tr(protocol.title, locale),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  protocol.instruction,
+                  AppStrings.tr(protocol.instruction, locale),
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
@@ -112,7 +119,7 @@ class ProtocolCard extends StatelessWidget {
                   TextButton.icon(
                     onPressed: onReplayInstruction,
                     icon: const Icon(Icons.replay_rounded, size: 18),
-                    label: const Text('निर्देश फिर सुनाएँ'),
+                    label: Text(AppStrings.tr('proto_replay', locale)),
                   ),
                 ],
                 const SizedBox(height: 20),
@@ -140,7 +147,7 @@ class ProtocolCard extends StatelessWidget {
                             style: Theme.of(context).textTheme.displaySmall,
                           ),
                           Text(
-                            'सेकंड शेष',
+                            AppStrings.tr('proto_seconds_left', locale),
                             style: Theme.of(context).textTheme.bodySmall,
                           ),
                         ],
@@ -151,8 +158,8 @@ class ProtocolCard extends StatelessWidget {
                 const SizedBox(height: 20),
                 AppPill(
                   label: running
-                      ? 'रिकॉर्डिंग चल रही है'
-                      : 'शुरू करने को तैयार',
+                      ? AppStrings.tr('proto_recording', locale)
+                      : AppStrings.tr('proto_ready', locale),
                   color: running ? const Color(0xFFC43D42) : scheme.primary,
                   icon: running
                       ? Icons.fiber_manual_record_rounded

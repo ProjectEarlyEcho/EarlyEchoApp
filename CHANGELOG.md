@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Localized every user-facing screen string through AppStrings — home, enrollment, questionnaire, consent, elicitation protocols, processing, result, referral, history and settings all render in the chosen language.
+A language row in settings re-opens the picker; tests keep passing under the Hindi default.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added first-run language selection (English/Hindi): a `/language` picker screen gated by router redirect until the choice is persisted in SharedPreferences, an AppStrings table with `tr`/`trf` lookups covering all UI text, and `flutter_localizations` delegates so Material chrome follows the `hi` locale.
 Hindi remains the default; the picker only appears when no choice has been saved.
 

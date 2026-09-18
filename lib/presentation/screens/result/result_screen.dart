@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/theme.dart';
 import '../../../data/models/biomarker_result.dart';
 import '../../../data/models/session_features.dart';
 import '../../../data/models/session_model.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../widgets/app_ui.dart';
@@ -97,12 +99,13 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(appLocaleProvider);
     final session = ref.watch(sessionProvider);
     final result = session.biomarkerResult;
     final features = session.features;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('परिणाम')),
+      appBar: AppBar(title: Text(AppStrings.tr('title_result', l10n))),
       body: SafeArea(
         top: false,
         child: Padding(
@@ -110,25 +113,32 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AppStepIndicator(
+              AppStepIndicator(
                 current: 6,
                 total: 7,
-                label: 'चरण 6/7 • परिणाम',
+                label: AppStrings.stepLabel(
+                  6,
+                  7,
+                  AppStrings.tr('step6_name', l10n),
+                  l10n,
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(
                 child: SingleChildScrollView(
                   child: result == null || features == null
-                      ? _NoResult(onHome: _goHome)
+                      ? _NoResult(onHome: _goHome, l10n: l10n)
                       : result.incomplete
                       ? _IncompleteResult(
                           reasons: result.qualityReasons,
                           onRetry: _retry,
+                          l10n: l10n,
                         )
                       : _ScoredResult(
                           result: result,
                           features: features,
                           onReferral: () => context.push('/referral'),
+                          l10n: l10n,
                         ),
                 ),
               ),
@@ -136,7 +146,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
               OutlinedButton.icon(
                 onPressed: _goHome,
                 icon: const Icon(Icons.home_rounded),
-                label: const Text('होम पर जाएँ'),
+                label: Text(AppStrings.tr('result_home', l10n)),
               ),
             ],
           ),
@@ -147,9 +157,10 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
 }
 
 class _NoResult extends StatelessWidget {
-  const _NoResult({required this.onHome});
+  const _NoResult({required this.onHome, required this.l10n});
 
   final VoidCallback onHome;
+  final Locale? l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -160,13 +171,13 @@ class _NoResult extends StatelessWidget {
           const AppIconBadge(icon: Icons.hourglass_empty_rounded, size: 64),
           const SizedBox(height: 18),
           Text(
-            'कोई परिणाम उपलब्ध नहीं',
+            AppStrings.tr('result_none_title', l10n),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.headlineSmall,
           ),
           const SizedBox(height: 10),
           Text(
-            'पहले स्क्रीनिंग पूरी करें — विश्लेषण के बाद परिणाम यहाँ दिखेगा।',
+            AppStrings.tr('result_none_body', l10n),
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
@@ -177,10 +188,15 @@ class _NoResult extends StatelessWidget {
 }
 
 class _IncompleteResult extends StatelessWidget {
-  const _IncompleteResult({required this.reasons, required this.onRetry});
+  const _IncompleteResult({
+    required this.reasons,
+    required this.onRetry,
+    required this.l10n,
+  });
 
   final List<String> reasons;
   final VoidCallback onRetry;
+  final Locale? l10n;
 
   @override
   Widget build(BuildContext context) {
@@ -190,8 +206,8 @@ class _IncompleteResult extends StatelessWidget {
         _RiskBanner(
           color: EarlyEchoTheme.riskYellow,
           icon: Icons.replay_rounded,
-          title: 'विश्लेषण अधूरा रहा',
-          subtitle: 'ऑडियो विश्लेषण अधूरा रहा। कृपया दोबारा स्क्रीनिंग करें।',
+          title: AppStrings.tr('result_incomplete_title', l10n),
+          subtitle: AppStrings.tr('result_incomplete_body', l10n),
         ),
         const SizedBox(height: 16),
         if (reasons.isNotEmpty)
@@ -200,7 +216,7 @@ class _IncompleteResult extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'गुणवत्ता कारण',
+                  AppStrings.tr('result_quality', l10n),
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
                 const SizedBox(height: 8),
@@ -228,7 +244,7 @@ class _IncompleteResult extends StatelessWidget {
         FilledButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.replay_rounded),
-          label: const Text('दोबारा स्क्रीनिंग करें'),
+          label: Text(AppStrings.tr('result_rescreen', l10n)),
         ),
       ],
     );
@@ -240,29 +256,34 @@ class _ScoredResult extends StatelessWidget {
     required this.result,
     required this.features,
     required this.onReferral,
+    required this.l10n,
   });
 
   final BiomarkerResult result;
   final SessionFeatures features;
   final VoidCallback onReferral;
+  final Locale? l10n;
 
   @override
   Widget build(BuildContext context) {
-    final (color, icon, title) = switch (result.riskLevel) {
+    final (color, icon, titleKey, explKey) = switch (result.riskLevel) {
       RiskLevel.green => (
         EarlyEchoTheme.riskGreen,
         Icons.check_circle_rounded,
-        'हरा — सामान्य विकास',
+        'result_green',
+        'result_green_expl',
       ),
       RiskLevel.yellow => (
         EarlyEchoTheme.riskYellow,
         Icons.warning_amber_rounded,
-        'पीला — एक चिंता का संकेत',
+        'result_yellow',
+        'result_yellow_expl',
       ),
       RiskLevel.red => (
         EarlyEchoTheme.riskRed,
         Icons.error_rounded,
-        'लाल — DEIC रेफरल की सलाह',
+        'result_red',
+        'result_red_expl',
       ),
     };
 
@@ -272,8 +293,8 @@ class _ScoredResult extends StatelessWidget {
         _RiskBanner(
           color: color,
           icon: icon,
-          title: title,
-          subtitle: result.hindiExplanation,
+          title: AppStrings.tr(titleKey, l10n),
+          subtitle: AppStrings.tr(explKey, l10n),
         ),
         const SizedBox(height: 16),
         Row(
@@ -308,7 +329,7 @@ class _ScoredResult extends StatelessWidget {
           FilledButton.icon(
             onPressed: onReferral,
             icon: const Icon(Icons.description_outlined),
-            label: const Text('रेफरल बनाएँ'),
+            label: Text(AppStrings.tr('result_referral', l10n)),
           ),
       ],
     );

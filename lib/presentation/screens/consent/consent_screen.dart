@@ -5,8 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../data/repositories/session_repository.dart';
 import '../../../services/consent_audio_service.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../widgets/app_ui.dart';
@@ -61,9 +63,10 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     } catch (_) {
       if (mounted) {
         setState(() {
-          _error =
-              'ऑडियो नहीं चल पाया। कृपया अभिभावक को सहमति का वाक्य पढ़कर '
-              'सुनाएँ और फिर से प्रयास करें।';
+          _error = AppStrings.tr(
+            'consent_audio_error',
+            ref.read(appLocaleProvider),
+          );
         });
       }
     } finally {
@@ -93,7 +96,10 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
       if (mounted) {
         setState(() {
           _confirming = false;
-          _error = 'सहमति दर्ज नहीं हो पाई। कृपया फिर से प्रयास करें।';
+          _error = AppStrings.tr(
+            'consent_save_error',
+            ref.read(appLocaleProvider),
+          );
         });
       }
       return;
@@ -114,9 +120,10 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(appLocaleProvider);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('सहमति')),
+      appBar: AppBar(title: Text(AppStrings.tr('title_consent', l10n))),
       body: SafeArea(
         top: false,
         child: Padding(
@@ -124,10 +131,15 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AppStepIndicator(
+              AppStepIndicator(
                 current: 3,
                 total: 7,
-                label: 'चरण 3/7 • सहमति',
+                label: AppStrings.stepLabel(
+                  3,
+                  7,
+                  AppStrings.tr('step3_name', l10n),
+                  l10n,
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -150,7 +162,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                               ),
                               const SizedBox(height: 22),
                               Text(
-                                'अभिभावक की सहमति',
+                                AppStrings.tr('consent_heading', l10n),
                                 textAlign: TextAlign.center,
                                 style: Theme.of(
                                   context,
@@ -158,8 +170,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'रिकॉर्डिंग शुरू करने से पहले अभिभावक को '
-                                'हिंदी में सहमति का वाक्य सुनाएँ।',
+                                AppStrings.tr('consent_body', l10n),
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
@@ -168,14 +179,16 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                                 const LinearProgressIndicator(),
                                 const SizedBox(height: 10),
                                 Text(
-                                  'सहमति ऑडियो चल रहा है…',
+                                  AppStrings.tr('consent_playing', l10n),
                                   style: Theme.of(context).textTheme.bodySmall,
                                 ),
                                 const SizedBox(height: 10),
                                 OutlinedButton.icon(
                                   onPressed: _toggleAudio,
                                   icon: const Icon(Icons.stop_rounded),
-                                  label: const Text('रोकें'),
+                                  label: Text(
+                                    AppStrings.tr('consent_stop', l10n),
+                                  ),
                                 ),
                               ] else
                                 OutlinedButton.icon(
@@ -187,8 +200,8 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                                   ),
                                   label: Text(
                                     _audioPlayed
-                                        ? 'फिर से सुनाएँ'
-                                        : 'सहमति का ऑडियो सुनाएँ',
+                                        ? AppStrings.tr('consent_replay', l10n)
+                                        : AppStrings.tr('consent_play', l10n),
                                   ),
                                 ),
                               if (_audioPlayed) ...[
@@ -203,7 +216,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                                     ),
                                     const SizedBox(width: 6),
                                     Text(
-                                      'ऑडियो सुनाया जा चुका है',
+                                      AppStrings.tr('consent_played', l10n),
                                       style: Theme.of(context)
                                           .textTheme
                                           .labelLarge
@@ -248,7 +261,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
               ),
               const SizedBox(height: 16),
               Text(
-                'ऑडियो कभी सहेजा या भेजा नहीं जाता। यह जाँच निदान नहीं है।',
+                AppStrings.tr('consent_privacy', l10n),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
@@ -258,7 +271,7 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
                     ? _confirmConsent
                     : null,
                 icon: const Icon(Icons.verified_user_outlined),
-                label: const Text('माता-पिता ने सहमति दी'),
+                label: Text(AppStrings.tr('consent_confirm', l10n)),
               ),
             ],
           ),

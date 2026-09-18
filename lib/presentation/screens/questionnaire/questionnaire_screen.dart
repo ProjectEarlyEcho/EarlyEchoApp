@@ -3,8 +3,10 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../data/models/child_profile.dart';
 import '../../../domain/milestone_engine.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
 
@@ -82,11 +84,12 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(appLocaleProvider);
     final profile = ref.watch(sessionProvider).childProfile;
     final questions = _questions;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('प्रश्नावली')),
+      appBar: AppBar(title: Text(AppStrings.tr('title_questionnaire', l10n))),
       body: SafeArea(
         top: false,
         child: Padding(
@@ -94,10 +97,15 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AppStepIndicator(
+              AppStepIndicator(
                 current: 2,
                 total: 7,
-                label: 'चरण 2/7 • प्रश्नावली (वैकल्पिक)',
+                label: AppStrings.stepLabel(
+                  2,
+                  7,
+                  AppStrings.tr('step2_name', l10n),
+                  l10n,
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(child: _buildBody(profile, questions)),
@@ -107,7 +115,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                   Expanded(
                     child: OutlinedButton(
                       onPressed: _skip,
-                      child: const Text('छोड़ें'),
+                      child: Text(AppStrings.tr('q_skip', l10n)),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -118,7 +126,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                           ? null
                           : () => _finish(profile?.childAgeMonths),
                       icon: const Icon(Icons.arrow_forward_rounded),
-                      label: const Text('सहमति की ओर बढ़ें'),
+                      label: Text(AppStrings.tr('q_next', l10n)),
                     ),
                   ),
                 ],
@@ -139,26 +147,26 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
   }
 
   Widget _buildBody(ChildProfile? profile, List<MilestoneQuestion>? questions) {
+    final l10n = ref.watch(appLocaleProvider);
     if (_loadFailed) {
-      return const Center(
-        child: Text('सवाल लोड नहीं हो पाए। कृपया आगे बढ़ें।'),
-      );
+      return Center(child: Text(AppStrings.tr('q_load_failed', l10n)));
     }
     if (questions == null) {
       return const Center(child: CircularProgressIndicator());
     }
     final applicable = _applicableFor(profile);
     if (applicable.isEmpty) {
-      return const Center(
-        child: Text('इस उम्र के लिए कोई सवाल उपलब्ध नहीं है।'),
-      );
+      return Center(child: Text(AppStrings.tr('q_none', l10n)));
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          '${_answers.length}/${applicable.length} उत्तर दिए गए',
+          AppStrings.trf('q_progress', l10n, {
+            'n': '${_answers.length}',
+            'total': '${applicable.length}',
+          }),
           style: Theme.of(context).textTheme.titleSmall,
         ),
         const SizedBox(height: 8),
@@ -171,7 +179,7 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
         ),
         const SizedBox(height: 12),
         Text(
-          'ये सवाल केवल संदर्भ के लिए हैं — असली जाँच ध्वनि-आधारित है।',
+          AppStrings.tr('q_context_note', l10n),
           style: Theme.of(context).textTheme.bodySmall,
         ),
         const SizedBox(height: 12),
@@ -187,7 +195,9 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'सवाल ${index + 1}',
+                      AppStrings.trf('q_question_n', l10n, {
+                        'n': '${index + 1}',
+                      }),
                       style: Theme.of(context).textTheme.labelLarge?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -201,9 +211,15 @@ class _QuestionnaireScreenState extends ConsumerState<QuestionnaireScreen> {
                     SegmentedButton<bool>(
                       emptySelectionAllowed: true,
                       showSelectedIcon: false,
-                      segments: const [
-                        ButtonSegment(value: true, label: Text('हाँ')),
-                        ButtonSegment(value: false, label: Text('नहीं')),
+                      segments: [
+                        ButtonSegment(
+                          value: true,
+                          label: Text(AppStrings.tr('q_yes', l10n)),
+                        ),
+                        ButtonSegment(
+                          value: false,
+                          label: Text(AppStrings.tr('q_no', l10n)),
+                        ),
                       ],
                       selected: selected == null
                           ? const <bool>{}

@@ -6,8 +6,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../services/audio_pipeline_service.dart';
 import '../../../services/elicitation_audio_service.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
 import 'elicitation_controller.dart';
@@ -71,9 +73,12 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
       } catch (_) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
+            SnackBar(
               content: Text(
-                'माइक्रोफ़ोन उपलब्ध नहीं है — रिकॉर्डिंग के बिना जारी।',
+                AppStrings.tr(
+                  'el_mic_unavailable',
+                  ref.read(appLocaleProvider),
+                ),
               ),
             ),
           );
@@ -124,11 +129,12 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
       context.push('/processing');
     });
 
+    final l10n = ref.watch(appLocaleProvider);
     final state = ref.watch(elicitationControllerProvider);
     final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('ध्वनि प्रेरण')),
+      appBar: AppBar(title: Text(AppStrings.tr('title_elicitation', l10n))),
       body: SafeArea(
         top: false,
         child: Padding(
@@ -136,23 +142,32 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AppStepIndicator(
+              AppStepIndicator(
                 current: 4,
                 total: 7,
-                label: 'चरण 4/7 • ध्वनि प्रेरण (Elicitation)',
+                label: AppStrings.stepLabel(
+                  4,
+                  7,
+                  AppStrings.tr('step4_name', l10n),
+                  l10n,
+                ),
               ),
               const SizedBox(height: 14),
               Row(
                 children: [
                   Expanded(
                     child: Text(
-                      'प्रोटोकॉल ${state.protocolIndex + 1}/3',
+                      AppStrings.trf('el_protocol_progress', l10n, {
+                        'n': '${state.protocolIndex + 1}',
+                      }),
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),
                   Text(
-                    'कुल समय: ${state.overallElapsedSeconds} / '
-                    '~${EarlyEchoConstants.elicitationTotalSeconds} सेकंड',
+                    AppStrings.trf('el_total_time', l10n, {
+                      'elapsed': '${state.overallElapsedSeconds}',
+                      'total': '${EarlyEchoConstants.elicitationTotalSeconds}',
+                    }),
                     style: Theme.of(context).textTheme.labelMedium?.copyWith(
                       color: scheme.onSurfaceVariant,
                     ),
@@ -174,6 +189,7 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
                   protocol: state.current,
                   elapsedSeconds: state.elapsedSeconds,
                   running: state.running,
+                  locale: l10n,
                   onReplayInstruction: state.running
                       ? _replayInstruction
                       : null,
@@ -183,6 +199,7 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
               _WaveformBars(
                 active: state.running,
                 seed: state.overallElapsedSeconds,
+                locale: l10n,
               ),
               const SizedBox(height: 14),
               if (state.completed)
@@ -199,7 +216,7 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
-                          'सभी गतिविधियाँ पूर्ण — विश्लेषण की ओर बढ़ रहे हैं…',
+                          AppStrings.tr('el_all_done', l10n),
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.labelLarge
                               ?.copyWith(color: scheme.primary),
@@ -212,8 +229,7 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
                 Padding(
                   padding: const EdgeInsets.only(bottom: 4),
                   child: Text(
-                    'रिकॉर्डिंग चल रही है — गतिविधि जारी रखें, टाइमर अपने '
-                    'आप आगे बढ़ेगा।',
+                    AppStrings.tr('el_recording_note', l10n),
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
@@ -224,8 +240,8 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
                   icon: const Icon(Icons.play_arrow_rounded),
                   label: Text(
                     state.protocolIndex == 0
-                        ? 'रिकॉर्डिंग शुरू करें'
-                        : 'अगली गतिविधि शुरू करें',
+                        ? AppStrings.tr('el_start', l10n)
+                        : AppStrings.tr('el_next_activity', l10n),
                   ),
                 ),
             ],
@@ -241,10 +257,15 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
 /// elapsed seconds, so it animates once per tick without a perpetual
 /// animation that would block tests.
 class _WaveformBars extends StatelessWidget {
-  const _WaveformBars({required this.active, required this.seed});
+  const _WaveformBars({
+    required this.active,
+    required this.seed,
+    required this.locale,
+  });
 
   final bool active;
   final int seed;
+  final Locale? locale;
 
   static const _barCount = 42;
 
@@ -252,7 +273,9 @@ class _WaveformBars extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
-      label: active ? 'रिकॉर्डिंग तरंग सक्रिय' : 'रिकॉर्डिंग तरंग रुकी हुई',
+      label: active
+          ? AppStrings.tr('waveform_active', locale)
+          : AppStrings.tr('waveform_idle', locale),
       child: AppSurface(
         color: scheme.surfaceContainerHighest.withValues(alpha: 0.7),
         borderColor: scheme.surfaceContainerHighest,

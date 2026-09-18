@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/constants.dart';
+import '../../../core/l10n/app_strings.dart';
 import '../../../data/models/child_profile.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
 
@@ -82,10 +84,11 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
   }
 
   String? _validateAge(String? value) {
+    final l10n = ref.read(appLocaleProvider);
     final text = value?.trim() ?? '';
-    if (text.isEmpty) return 'बच्चे की उम्र दर्ज करें';
+    if (text.isEmpty) return AppStrings.tr('cp_age_required', l10n);
     final months = int.tryParse(text);
-    if (months == null) return 'उम्र पूरे महीनों में संख्या लिखें';
+    if (months == null) return AppStrings.tr('cp_age_number', l10n);
     final profile = ChildProfile(
       childAgeMonths: months,
       anganwadiId: '',
@@ -93,14 +96,17 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
       districtCode: '',
     );
     if (!profile.isAgeValid) {
-      return 'उम्र ${EarlyEchoConstants.minChildAgeMonths}–'
-          '${EarlyEchoConstants.maxChildAgeMonths} महीनों के बीच होनी चाहिए';
+      return AppStrings.trf('cp_age_range', l10n, {
+        'min': '${EarlyEchoConstants.minChildAgeMonths}',
+        'max': '${EarlyEchoConstants.maxChildAgeMonths}',
+      });
     }
     return null;
   }
 
-  String? _required(String? value, String message) {
-    return (value == null || value.trim().isEmpty) ? message : null;
+  String? _required(String? value, String messageKey) {
+    if (value != null && value.trim().isNotEmpty) return null;
+    return AppStrings.tr(messageKey, ref.read(appLocaleProvider));
   }
 
   void _submit() {
@@ -124,9 +130,10 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(appLocaleProvider);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('बच्चे की जानकारी')),
+      appBar: AppBar(title: Text(AppStrings.tr('title_child_profile', l10n))),
       body: SafeArea(
         top: false,
         child: Form(
@@ -134,16 +141,20 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
           child: ListView(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
             children: [
-              const AppStepIndicator(
+              AppStepIndicator(
                 current: 1,
                 total: 7,
-                label: 'चरण 1/7 • बच्चे की जानकारी',
+                label: AppStrings.stepLabel(
+                  1,
+                  7,
+                  AppStrings.tr('step1_name', l10n),
+                  l10n,
+                ),
               ),
               const SizedBox(height: 20),
-              const AppSectionHeader(
-                title: 'बच्चे का विवरण भरें',
-                subtitle:
-                    'Fill in the child and worker details. The name is optional.',
+              AppSectionHeader(
+                title: AppStrings.tr('cp_header', l10n),
+                subtitle: AppStrings.tr('cp_header_sub', l10n),
               ),
               const SizedBox(height: 22),
               AppSurface(
@@ -159,7 +170,7 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
                         const SizedBox(width: 12),
                         Expanded(
                           child: Text(
-                            'बच्चे का विवरण',
+                            AppStrings.tr('cp_section_child', l10n),
                             style: Theme.of(context).textTheme.titleMedium,
                           ),
                         ),
@@ -169,10 +180,10 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
                     TextFormField(
                       controller: _nameController,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'बच्चे का नाम (वैकल्पिक)',
-                        hintText: 'Child name — optional',
-                        prefixIcon: Icon(Icons.person_outline_rounded),
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr('cp_child_name', l10n),
+                        hintText: AppStrings.tr('cp_child_name_hint', l10n),
+                        prefixIcon: const Icon(Icons.person_outline_rounded),
                       ),
                     ),
                     const SizedBox(height: 18),
@@ -180,10 +191,10 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
                       controller: _ageController,
                       keyboardType: TextInputType.number,
                       inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                      decoration: const InputDecoration(
-                        labelText: 'उम्र (महीनों में)',
-                        hintText: 'Age in months, 12–60',
-                        prefixIcon: Icon(Icons.cake_outlined),
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr('cp_age', l10n),
+                        hintText: AppStrings.tr('cp_age_hint', l10n),
+                        prefixIcon: const Icon(Icons.cake_outlined),
                       ),
                       validator: _validateAge,
                     ),
@@ -196,29 +207,29 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'स्क्रीनिंग स्थान',
+                      AppStrings.tr('cp_section_location', l10n),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _anganwadiController,
                       textCapitalization: TextCapitalization.characters,
-                      decoration: const InputDecoration(
-                        labelText: 'आंगनबाड़ी आईडी',
-                        hintText: 'Anganwadi ID, e.g. IN-MP-042',
-                        prefixIcon: Icon(Icons.location_city_outlined),
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr('cp_anganwadi', l10n),
+                        hintText: AppStrings.tr('cp_anganwadi_hint', l10n),
+                        prefixIcon: const Icon(Icons.location_city_outlined),
                       ),
                       validator: (value) =>
-                          _required(value, 'आंगनबाड़ी आईडी आवश्यक है'),
+                          _required(value, 'cp_anganwadi_required'),
                     ),
                     const SizedBox(height: 16),
                     DropdownButtonFormField<String>(
                       initialValue: _stateCode,
                       isExpanded: true,
-                      decoration: const InputDecoration(
-                        labelText: 'राज्य',
-                        hintText: 'State',
-                        prefixIcon: Icon(Icons.map_outlined),
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr('cp_state', l10n),
+                        hintText: AppStrings.tr('cp_state_hint', l10n),
+                        prefixIcon: const Icon(Icons.map_outlined),
                       ),
                       items: _states
                           .map(
@@ -229,19 +240,21 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
                           )
                           .toList(),
                       onChanged: (value) => setState(() => _stateCode = value),
-                      validator: (value) =>
-                          value == null ? 'राज्य चुनें' : null,
+                      validator: (value) => value == null
+                          ? AppStrings.tr('cp_state_required', l10n)
+                          : null,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _districtController,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'जिला',
-                        hintText: 'District',
-                        prefixIcon: Icon(Icons.place_outlined),
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr('cp_district', l10n),
+                        hintText: AppStrings.tr('cp_district_hint', l10n),
+                        prefixIcon: const Icon(Icons.place_outlined),
                       ),
-                      validator: (value) => _required(value, 'जिला दर्ज करें'),
+                      validator: (value) =>
+                          _required(value, 'cp_district_required'),
                     ),
                   ],
                 ),
@@ -252,20 +265,20 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'कार्यकर्ता',
+                      AppStrings.tr('cp_section_worker', l10n),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 16),
                     TextFormField(
                       controller: _workerController,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(
-                        labelText: 'कार्यकर्ता का नाम',
-                        hintText: 'Worker name',
-                        prefixIcon: Icon(Icons.badge_outlined),
+                      decoration: InputDecoration(
+                        labelText: AppStrings.tr('cp_worker', l10n),
+                        hintText: AppStrings.tr('cp_worker_hint', l10n),
+                        prefixIcon: const Icon(Icons.badge_outlined),
                       ),
                       validator: (value) =>
-                          _required(value, 'कार्यकर्ता का नाम दर्ज करें'),
+                          _required(value, 'cp_worker_required'),
                     ),
                   ],
                 ),
@@ -274,7 +287,7 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
               FilledButton.icon(
                 onPressed: _submit,
                 icon: const Icon(Icons.arrow_forward_rounded),
-                label: const Text('प्रश्नावली की ओर बढ़ें'),
+                label: Text(AppStrings.tr('cp_next', l10n)),
               ),
             ],
           ),

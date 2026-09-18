@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../data/models/session_features.dart';
 import '../../../domain/scoring_engine.dart';
 import '../../../services/audio_pipeline_service.dart';
+import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
 
@@ -57,16 +59,22 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
       if (mounted) setState(() => _error = e.message);
     } catch (_) {
       if (mounted) {
-        setState(() => _error = 'विश्लेषण पूरा नहीं हो सका।');
+        setState(
+          () => _error = AppStrings.tr(
+            'proc_failed',
+            ref.read(appLocaleProvider),
+          ),
+        );
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = ref.watch(appLocaleProvider);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('विश्लेषण')),
+      appBar: AppBar(title: Text(AppStrings.tr('title_processing', l10n))),
       body: SafeArea(
         top: false,
         child: Padding(
@@ -74,10 +82,15 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AppStepIndicator(
+              AppStepIndicator(
                 current: 5,
                 total: 7,
-                label: 'चरण 5/7 • विश्लेषण (Processing)',
+                label: AppStrings.stepLabel(
+                  5,
+                  7,
+                  AppStrings.tr('step5_name', l10n),
+                  l10n,
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -96,16 +109,14 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
                           ),
                           const SizedBox(height: 22),
                           Text(
-                            'ऑडियो विश्लेषण',
+                            AppStrings.tr('proc_title', l10n),
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           const SizedBox(height: 10),
                           Text(
                             _error == null
-                                ? 'रिकॉर्ड की गई आवाज़ इसी फ़ोन पर जाँची जा '
-                                      'रही है — इसमें 8 से 30 सेकंड लग सकते हैं। '
-                                      'ऑडियो कभी फ़ोन से बाहर नहीं जाता।'
+                                ? AppStrings.tr('proc_body', l10n)
                                 : _error!,
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium,
@@ -145,7 +156,7 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
                 FilledButton.icon(
                   onPressed: _analyze,
                   icon: const Icon(Icons.refresh_rounded),
-                  label: const Text('दोबारा प्रयास करें'),
+                  label: Text(AppStrings.tr('proc_retry', l10n)),
                 )
               else
                 const SizedBox.shrink(),

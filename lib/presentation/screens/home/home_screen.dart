@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/app_strings.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/app_ui.dart';
 
 /// The worker's landing screen — entry point into the screening flow.
 ///
-/// Placeholder for Phase 6; the recent-screenings list and the pending-sync
-/// banner land there. For now it exposes the three top-level destinations:
-/// starting a new screening, reviewing past results, and opening settings.
-class HomeScreen extends StatelessWidget {
+/// Exposes the three top-level destinations: starting a new screening,
+/// reviewing past results, and opening settings. All user-facing text is
+/// localized through [AppStrings] for the selected app language.
+class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.watch(appLocaleProvider);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
@@ -20,12 +24,12 @@ class HomeScreen extends StatelessWidget {
         actions: [
           IconButton(
             icon: const Icon(Icons.history_rounded),
-            tooltip: 'पुरानी जाँचें',
+            tooltip: AppStrings.tr('tooltip_history', l10n),
             onPressed: () => context.push('/history'),
           ),
           IconButton(
             icon: const Icon(Icons.tune_rounded),
-            tooltip: 'सेटिंग्स',
+            tooltip: AppStrings.tr('tooltip_settings', l10n),
             onPressed: () => context.push('/settings'),
           ),
           const SizedBox(width: 8),
@@ -43,11 +47,9 @@ class HomeScreen extends StatelessWidget {
                   child: SingleChildScrollView(
                     child: Column(
                       children: [
-                        const AppSectionHeader(
-                          title: 'नमस्ते!',
-                          subtitle:
-                              'बच्चे की आवाज़ से विकास की शुरुआती जाँच — '
-                              'ध्वनि-आधारित स्क्रीनिंग।',
+                        AppSectionHeader(
+                          title: AppStrings.tr('home_greeting', l10n),
+                          subtitle: AppStrings.tr('home_greeting_sub', l10n),
                         ),
                         const SizedBox(height: 16),
                         AppSurface(
@@ -63,7 +65,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 22),
                               Text(
-                                'ध्वनि-आधारित विकास जाँच',
+                                AppStrings.tr('home_hero_title', l10n),
                                 textAlign: TextAlign.center,
                                 style: Theme.of(
                                   context,
@@ -71,9 +73,7 @@ class HomeScreen extends StatelessWidget {
                               ),
                               const SizedBox(height: 10),
                               Text(
-                                'तीन छोटी गतिविधियों में बच्चे की आवाज़ '
-                                'रिकॉर्ड होती है। यह निदान नहीं, केवल '
-                                'शुरुआती जाँच है।',
+                                AppStrings.tr('home_hero_body', l10n),
                                 textAlign: TextAlign.center,
                                 style: Theme.of(context).textTheme.bodyMedium,
                               ),
@@ -100,15 +100,14 @@ class HomeScreen extends StatelessWidget {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      'निजता पहले',
+                                      AppStrings.tr('home_privacy_title', l10n),
                                       style: Theme.of(
                                         context,
                                       ).textTheme.titleSmall,
                                     ),
                                     const SizedBox(height: 3),
                                     Text(
-                                      'ऑडियो इसी फ़ोन पर जाँचा जाता है — '
-                                      'रिकॉर्डिंग फ़ोन से बाहर नहीं जाती।',
+                                      AppStrings.tr('home_privacy_body', l10n),
                                       style: Theme.of(
                                         context,
                                       ).textTheme.bodySmall,
@@ -128,13 +127,13 @@ class HomeScreen extends StatelessWidget {
               FilledButton.icon(
                 onPressed: () => context.push('/child-profile'),
                 icon: const Icon(Icons.add_rounded),
-                label: const Text('नई स्क्रीनिंग शुरू करें'),
+                label: Text(AppStrings.tr('home_new_screening', l10n)),
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
                 onPressed: () => context.push('/history'),
                 icon: const Icon(Icons.history_rounded),
-                label: const Text('पुरानी जाँचें देखें'),
+                label: Text(AppStrings.tr('home_view_history', l10n)),
               ),
             ],
           ),

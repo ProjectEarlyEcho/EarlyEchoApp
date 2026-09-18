@@ -1,20 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/l10n/app_strings.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/app_ui.dart';
 
 /// Step 7 of the screening flow — the DEIC referral letter.
 ///
 /// Placeholder for Phase 8; the generated letter, PDF export and the
 /// WhatsApp share intent land there.
-class ReferralScreen extends StatelessWidget {
+class ReferralScreen extends ConsumerWidget {
   const ReferralScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.watch(appLocaleProvider);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('रेफरल')),
+      appBar: AppBar(title: Text(AppStrings.tr('title_referral', l10n))),
       body: SafeArea(
         top: false,
         child: Padding(
@@ -22,10 +26,15 @@ class ReferralScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const AppStepIndicator(
+              AppStepIndicator(
                 current: 7,
                 total: 7,
-                label: 'चरण 7/7 • रेफरल',
+                label: AppStrings.stepLabel(
+                  7,
+                  7,
+                  AppStrings.tr('step7_name', l10n),
+                  l10n,
+                ),
               ),
               const SizedBox(height: 16),
               Expanded(
@@ -44,16 +53,13 @@ class ReferralScreen extends StatelessWidget {
                           ),
                           const SizedBox(height: 22),
                           Text(
-                            'DEIC रेफरल पत्र',
+                            AppStrings.tr('ref_title', l10n),
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.headlineSmall,
                           ),
                           const SizedBox(height: 10),
                           Text(
-                            'रेफरल पत्र में बच्चे की उम्र, जाँच की तारीख, बायोमार्कर '
-                            'मान और निकटतम DEIC (जिला प्रारंभिक हस्तक्षेप केंद्र) का '
-                            'संपर्क शामिल होगा। पत्र WhatsApp के माध्यम से साझा किया '
-                            'जा सकेगा।',
+                            AppStrings.tr('ref_body', l10n),
                             textAlign: TextAlign.center,
                             style: Theme.of(context).textTheme.bodyMedium,
                           ),
@@ -67,7 +73,7 @@ class ReferralScreen extends StatelessWidget {
               FilledButton.icon(
                 onPressed: () => context.go('/'),
                 icon: const Icon(Icons.home_rounded),
-                label: const Text('होम पर लौटें'),
+                label: Text(AppStrings.tr('ref_home', l10n)),
               ),
             ],
           ),

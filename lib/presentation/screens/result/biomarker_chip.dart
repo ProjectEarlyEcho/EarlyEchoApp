@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/app_strings.dart';
 import '../../../core/theme.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/app_ui.dart';
 
 /// One biomarker reading on the result screen: value plus a
 /// ✓ सामान्य / ⚠ चिन्हित status, colored like the risk banner.
-class BiomarkerChip extends StatelessWidget {
+class BiomarkerChip extends ConsumerWidget {
   const BiomarkerChip({
     super.key,
     required this.name,
@@ -18,7 +21,8 @@ class BiomarkerChip extends StatelessWidget {
   final bool flagged;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.watch(appLocaleProvider);
     final color = flagged ? EarlyEchoTheme.riskRed : EarlyEchoTheme.riskGreen;
     return AppSurface(
       color: color.withValues(alpha: 0.08),
@@ -54,7 +58,9 @@ class BiomarkerChip extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            flagged ? 'चिन्हित' : 'सामान्य',
+            flagged
+                ? AppStrings.tr('chip_flagged', l10n)
+                : AppStrings.tr('chip_normal', l10n),
             style: Theme.of(
               context,
             ).textTheme.labelSmall?.copyWith(color: color),

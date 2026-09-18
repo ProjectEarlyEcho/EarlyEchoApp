@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/l10n/app_strings.dart';
+import '../../providers/locale_provider.dart';
 import '../../widgets/app_ui.dart';
 
 /// Saved screening results — the worker's record of past sessions.
@@ -7,14 +10,15 @@ import '../../widgets/app_ui.dart';
 /// Placeholder for Phase 6; the list of locally stored sessions (child,
 /// date, risk band, sync state) lands there. Only numeric results are kept —
 /// audio is never stored.
-class ResultHistoryScreen extends StatelessWidget {
+class ResultHistoryScreen extends ConsumerWidget {
   const ResultHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = ref.watch(appLocaleProvider);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: const Text('पुरानी जाँचें')),
+      appBar: AppBar(title: Text(AppStrings.tr('title_history', l10n))),
       body: SafeArea(
         top: false,
         child: Padding(
@@ -34,15 +38,13 @@ class ResultHistoryScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 22),
                     Text(
-                      'सहेजी गई जाँचें',
+                      AppStrings.tr('hist_title', l10n),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.headlineSmall,
                     ),
                     const SizedBox(height: 10),
                     Text(
-                      'पूरी हुई स्क्रीनिंग यहाँ दिखेगी — बच्चे की उम्र, जाँच की '
-                      'तारीख और जोखिम श्रेणी (हरा/पीला/लाल) के साथ। केवल '
-                      'संख्यात्मक परिणाम सहेजे जाते हैं, ऑडियो नहीं।',
+                      AppStrings.tr('hist_body', l10n),
                       textAlign: TextAlign.center,
                       style: Theme.of(context).textTheme.bodyMedium,
                     ),
