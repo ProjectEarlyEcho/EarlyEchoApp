@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added an ElicitationAudioPlayer port and provider for per-protocol Hindi instruction clips; the three bundled mp3s (rattle, toy hide, imitate) are 3–4 s silent placeholders standing in for real instruction recordings.
+The elicitation step can speak each activity's prompt on-device while widget tests stub the player, matching the consent audio pattern.
+
+### 2026-09-18 - Mathew Joseph - pending
 Replaced the consent placeholder with the gated flow: the worker plays the Hindi consent audio, the "माता-पिता ने सहमति दी" button unlocks only after playback, and confirming writes a timestamped consent_logs row (session_id NULL) while recording consentedAt and the log id on the session provider.
 The screening can no longer reach the recording step without an auditable consent record; playback or persistence failures surface a Hindi fallback and keep the gate closed.
 
