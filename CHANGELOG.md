@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added first-run language selection (English/Hindi): a `/language` picker screen gated by router redirect until the choice is persisted in SharedPreferences, an AppStrings table with `tr`/`trf` lookups covering all UI text, and `flutter_localizations` delegates so Material chrome follows the `hi` locale.
+Hindi remains the default; the picker only appears when no choice has been saved.
+
+### 2026-09-18 - Mathew Joseph - pending
 Mocked the `com.earlyecho/audio_pipeline` MethodChannel in widget tests via a shared helper with canned COMPLETE/INCOMPLETE payloads, and updated the elicitation, processing, result, and routes tests for the live pipeline flow.
 The full screening walkthrough now exercises permission → capture → analysis → scored result → referral end to end off-device.
 

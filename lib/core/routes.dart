@@ -1,17 +1,20 @@
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../presentation/providers/locale_provider.dart';
 import '../presentation/screens/child_profile/child_profile_screen.dart';
 import '../presentation/screens/consent/consent_screen.dart';
 import '../presentation/screens/elicitation/elicitation_screen.dart';
 import '../presentation/screens/history/result_history_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
+import '../presentation/screens/language/language_selection_screen.dart';
 import '../presentation/screens/processing/processing_screen.dart';
 import '../presentation/screens/questionnaire/questionnaire_screen.dart';
 import '../presentation/screens/referral/referral_screen.dart';
 import '../presentation/screens/result/result_screen.dart';
 import '../presentation/screens/settings/settings_screen.dart';
 
-/// Route table for the app shell — one entry per placeholder screen.
+/// Route table for the app shell — one entry per screen.
 ///
 /// Ordered to match the seven-step screening flow (home → child profile →
 /// questionnaire → consent → elicitation → processing → result → referral),
@@ -51,5 +54,25 @@ final appRoutes = <GoRoute>[
   ),
 ];
 
-/// App-wide router used by [EarlyEchoApp].
-final goRouter = GoRouter(initialLocation: '/', routes: appRoutes);
+/// App-wide router for [EarlyEchoApp].
+///
+/// Until the worker has picked a language, every navigation is redirected
+/// to `/language`; the picker persists the choice and the router rebuilds
+/// when [appLocaleProvider] changes.
+final appRouterProvider = Provider<GoRouter>((ref) {
+  final locale = ref.watch(appLocaleProvider);
+  return GoRouter(
+    initialLocation: '/',
+    redirect: (context, state) {
+      if (locale != null) return null;
+      return state.matchedLocation == '/language' ? null : '/language';
+    },
+    routes: [
+      GoRoute(
+        path: '/language',
+        builder: (context, state) => const LanguageSelectionScreen(),
+      ),
+      ...appRoutes,
+    ],
+  );
+});
