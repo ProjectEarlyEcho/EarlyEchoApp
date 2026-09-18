@@ -5,6 +5,9 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Mathew Hans
+Added `hardware/cardsensor.ino`, an ESP32 Hall-effect card sensor sketch with startup baseline calibration, NORTH/SOUTH classification, a deadzone, and rolling majority filtering.
+
+### 2026-09-19 - Mathew Hans
 Added a temporary home-screen Gemini Live control that opens a persistent WebSocket, streams 16 kHz PCM microphone audio, and continuously feeds 24 kHz model PCM output to the phone audio route.
 Pairing an ESP32 A2DP sink as a Bluetooth speaker now needs no Flutter Bluetooth transport; microphone uplink is muted while model audio plays to reduce acoustic echo.
 Android capture explicitly uses the microphone source without Bluetooth SCO management, and the app now requests network access for the Live API socket.
