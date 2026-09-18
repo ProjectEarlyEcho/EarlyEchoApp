@@ -29,6 +29,7 @@ These rules apply to every repository unless a more specific instruction takes p
 - Make changes first, then run the focused validation once immediately before committing. Avoid repeatedly running the same broad suite during implementation unless a failure requires it.
 - Run the closest available check for the change. If no focused check exists, run the project test suite, build, lint, or CI-equivalent command that is available.
 - Do not commit known failures. If validation cannot run, record the reason in the commit body and changelog entry.
+- Every change must have the minimum relevant test coverage, and CI/CD should include only necessary, non-redundant tests.
 
 ## Review Before Commit
 
