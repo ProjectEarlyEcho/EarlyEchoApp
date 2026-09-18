@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Mathew Joseph
+Updated widget-test locale defaults and navigation expectations for the guided questionnaire and developmental-goals stage.
+The CI suite now exercises the selected-language flow without stale screen assumptions.
+
+### 2026-09-19 - Mathew Joseph
 Merged the parent and clinician dashboard with the mobile screening backend schema.
 The care portal and mobile screening records now coexist without schema conflicts.
 

@@ -31,6 +31,7 @@ class MilestoneQuestion {
   final String? domain;
 
   String questionForLanguage(String? languageCode) {
+    if (languageCode == 'hi') return questionHi;
     return questionEn ?? _englishQuestions[id] ?? questionHi;
   }
 

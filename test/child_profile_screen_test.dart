@@ -5,6 +5,7 @@ import 'package:earlyecho/core/theme.dart';
 import 'package:earlyecho/domain/milestone_engine.dart';
 import 'package:earlyecho/presentation/providers/session_provider.dart';
 import 'package:earlyecho/presentation/screens/child_profile/child_profile_screen.dart';
+import 'package:earlyecho/presentation/screens/developmental_goals/developmental_goals_screen.dart';
 import 'package:earlyecho/presentation/screens/questionnaire/questionnaire_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -122,6 +123,9 @@ void main() {
     await tester.tap(find.text('प्रश्नावली की ओर बढ़ें'));
     await tester.pumpAndSettle();
 
+    expect(find.byType(DevelopmentalGoalsScreen), findsOneWidget);
+    await tester.tap(find.text('प्रश्नावली की ओर बढ़ें'));
+    await tester.pumpAndSettle();
     expect(find.byType(QuestionnaireScreen), findsOneWidget);
 
     final profile = container.read(sessionProvider).childProfile;
