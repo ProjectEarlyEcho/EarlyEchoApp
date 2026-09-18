@@ -8,6 +8,7 @@ import 'package:earlyecho/domain/milestone_engine.dart';
 import 'package:earlyecho/presentation/providers/sync_provider.dart';
 import 'package:earlyecho/presentation/screens/child_profile/child_profile_screen.dart';
 import 'package:earlyecho/presentation/screens/consent/consent_screen.dart';
+import 'package:earlyecho/presentation/screens/developmental_goals/developmental_goals_screen.dart';
 import 'package:earlyecho/presentation/screens/elicitation/elicitation_screen.dart';
 import 'package:earlyecho/presentation/screens/history/result_history_screen.dart';
 import 'package:earlyecho/presentation/screens/home/home_screen.dart';
@@ -158,8 +159,9 @@ void main() {
     await tester.tap(find.text('Madhya Pradesh').last);
     await tester.pumpAndSettle();
 
+    await tapNext('प्रश्नावली की ओर बढ़ें', DevelopmentalGoalsScreen);
     await tapNext('प्रश्नावली की ओर बढ़ें', QuestionnaireScreen);
-    await tapNext('सहमति की ओर बढ़ें', ConsentScreen);
+    await tapNext('छोड़ें', ConsentScreen);
     // The consent gate: the confirm button only unlocks after the audio
     // statement has been played once.
     await tapNext('सहमति का ऑडियो सुनाएँ', ConsentScreen);

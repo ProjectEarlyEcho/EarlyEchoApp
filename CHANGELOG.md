@@ -4,6 +4,14 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-09-19 - Mathew Joseph
+Updated widget-test locale defaults and navigation expectations for the guided questionnaire and developmental-goals stage.
+The CI suite now exercises the selected-language flow without stale screen assumptions.
+
+### 2026-09-19 - Mathew Joseph
+Merged the parent and clinician dashboard with the mobile screening backend schema.
+The care portal and mobile screening records now coexist without schema conflicts.
+
 ### 2026-09-18 - Mathew Joseph
 Aligned the screening flow with MozhiMuthal: added the complete MyChild questionnaire engine and dedicated age-based CDC developmental goals, fixed locale-aware English/Hindi rendering, and passed child age into native audio analysis.
 Added per-activity voice skips plus real locale-selected Hindi and English parental-consent audio, each shorter than 15 seconds.
@@ -140,7 +148,19 @@ Builds the first half of the screening flow as navigable Hindi-first placeholder
 Added the EarlyEcho app theme and shared app constants (channel name, protocol timings, age bounds, audio format).
 Establishes the worker-centric visual foundation: India-inspired saffron/teal Material 3 palette, enlarged text, and 48dp+ tap targets for outdoor use.
 
-### 2026-09-18 - Mathew Joseph
+### 2026-09-18 - Devadathan M R - pending
+Corrected the care-conversation trigger to use PostgreSQL's built-in table-name trigger variable.
+Guardian and clinician assignments can now create their secure conversations without failing the demo seed.
+
+### 2026-09-18 - Devadathan M R - pending
+Added an idempotent, development-only Supabase demo-data seeder with synthetic parent and clinician accounts.
+It creates linked children, screening histories, appointments, messages, and clinician-only notes for dashboard testing.
+
+### 2026-09-18 - Devadathan M R - pending
+Added the EarlyEcho Next.js care portal with parent and clinician workspaces for screening summaries, appointments, and secure care-team messaging.
+Introduced Supabase role-based access controls and row-level security, plus dashboard checks in continuous integration.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added a rule to the agent working agreement requiring minimum relevant test coverage per change and non-redundant CI tests.
 Keeps future test and workflow additions focused on what each change actually exercises.
 

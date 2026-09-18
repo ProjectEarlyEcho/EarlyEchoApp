@@ -5,7 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// The persisted English or Hindi app language.
 class AppLocaleNotifier extends StateNotifier<Locale?> {
-  AppLocaleNotifier({Locale? initial}) : super(initial ?? const Locale('en'));
+  AppLocaleNotifier({Locale? initial}) : super(initial ?? const Locale('hi'));
 
   /// First-run state: no choice yet, so the router shows the picker.
   AppLocaleNotifier.undecided() : super(null);
