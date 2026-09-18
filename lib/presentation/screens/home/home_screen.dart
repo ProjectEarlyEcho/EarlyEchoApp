@@ -38,6 +38,12 @@ class HomeScreen extends ConsumerWidget {
                 }
               },
             ),
+          if (auth.signedIn)
+            IconButton(
+              icon: const Icon(Icons.medical_information_outlined),
+              tooltip: 'Care portal',
+              onPressed: () => context.push('/care'),
+            ),
           IconButton(
             icon: const Icon(Icons.history_rounded),
             tooltip: AppStrings.tr('tooltip_history', l10n),
@@ -141,7 +147,9 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: () => context.push('/child-profile'),
+                onPressed: () => context.push(
+                  auth.canSyncScreenings ? '/care/children' : '/child-profile',
+                ),
                 icon: const Icon(Icons.add_rounded),
                 label: Text(AppStrings.tr('home_new_screening', l10n)),
               ),

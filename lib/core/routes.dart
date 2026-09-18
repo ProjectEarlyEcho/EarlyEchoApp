@@ -10,6 +10,8 @@ import '../presentation/screens/history/result_history_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
 import '../presentation/screens/language/language_selection_screen.dart';
 import '../presentation/screens/auth/login_screen.dart';
+import '../presentation/screens/care/care_portal_screen.dart';
+import '../presentation/screens/care/child_picker_screen.dart';
 import '../presentation/screens/processing/processing_screen.dart';
 import '../presentation/screens/questionnaire/questionnaire_screen.dart';
 import '../presentation/screens/referral/referral_screen.dart';
@@ -25,6 +27,17 @@ import '../presentation/screens/settings/settings_screen.dart';
 final appRoutes = <GoRoute>[
   GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
   GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+  GoRoute(
+    path: '/care/children',
+    builder: (context, state) => const ChildPickerScreen(),
+  ),
+  GoRoute(path: '/care', builder: (context, state) => const CarePortalScreen()),
+  GoRoute(
+    path: '/care/conversations/:conversationId',
+    builder: (context, state) => CareMessageThreadScreen(
+      conversationId: state.pathParameters['conversationId']!,
+    ),
+  ),
   GoRoute(
     path: '/child-profile',
     builder: (context, state) => const ChildProfileScreen(),

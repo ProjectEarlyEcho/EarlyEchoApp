@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/models/biomarker_result.dart';
 import '../../data/models/child_profile.dart';
 import '../../data/models/session_features.dart';
+import '../../data/repositories/care_repository.dart';
 import '../../domain/milestone_engine.dart';
 
 /// In-progress screening session, shared across the flow screens.
@@ -14,6 +15,7 @@ import '../../domain/milestone_engine.dart';
 class SessionState {
   const SessionState({
     this.childProfile,
+    this.selectedCareChild,
     this.milestoneAnswers = const {},
     this.milestoneSummary,
     this.questionnaireSkipped = false,
@@ -27,6 +29,7 @@ class SessionState {
 
   /// Enrollment details from the child profile screen.
   final ChildProfile? childProfile;
+  final CareChild? selectedCareChild;
 
   /// Question id -> हाँ (true) / नहीं (false) from the milestone screen.
   final Map<String, bool> milestoneAnswers;
@@ -64,6 +67,7 @@ class SessionState {
 
   SessionState copyWith({
     ChildProfile? childProfile,
+    CareChild? selectedCareChild,
     Map<String, bool>? milestoneAnswers,
     MilestoneSummary? milestoneSummary,
     bool? questionnaireSkipped,
@@ -76,6 +80,7 @@ class SessionState {
   }) {
     return SessionState(
       childProfile: childProfile ?? this.childProfile,
+      selectedCareChild: selectedCareChild ?? this.selectedCareChild,
       milestoneAnswers: milestoneAnswers ?? this.milestoneAnswers,
       milestoneSummary: milestoneSummary ?? this.milestoneSummary,
       questionnaireSkipped: questionnaireSkipped ?? this.questionnaireSkipped,
@@ -94,6 +99,10 @@ class SessionNotifier extends StateNotifier<SessionState> {
 
   void setChildProfile(ChildProfile profile) {
     state = state.copyWith(childProfile: profile);
+  }
+
+  void selectCareChild(CareChild child) {
+    state = state.copyWith(selectedCareChild: child);
   }
 
   /// Records a single हाँ/नहीं answer as the worker taps through.

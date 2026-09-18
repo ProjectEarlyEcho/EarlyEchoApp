@@ -26,7 +26,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper();
 
   static const String databaseName = 'earlyecho.db';
-  static const int databaseVersion = 2;
+  static const int databaseVersion = 3;
 
   static const String tableSessions = 'sessions';
   static const String tableConsentLogs = 'consent_logs';
@@ -70,6 +70,7 @@ class DatabaseHelper {
         state_code TEXT NOT NULL,
         worker_name TEXT,
         child_name TEXT,
+        cloud_child_id TEXT,
         child_age_months INTEGER NOT NULL,
         session_date TEXT NOT NULL,
         risk_level TEXT NOT NULL,
@@ -129,6 +130,11 @@ class DatabaseHelper {
       await db.execute('DROP TABLE $tableConsentLogs');
       await db.execute(
         'ALTER TABLE consent_logs_new RENAME TO $tableConsentLogs',
+      );
+    }
+    if (oldVersion < 3) {
+      await db.execute(
+        'ALTER TABLE $tableSessions ADD COLUMN cloud_child_id TEXT',
       );
     }
   }
