@@ -5,7 +5,8 @@ import '../../domain/milestone_engine.dart';
 
 /// In-progress screening session, shared across the flow screens.
 ///
-/// Holds the enrollment profile plus the optional questionnaire outcome.
+/// Holds the enrollment profile, the optional questionnaire outcome, and
+/// the confirmed parental-consent marker.
 /// Persisted to SQLite only when the screening completes — this state is
 /// in-memory and resets with [SessionNotifier.reset].
 class SessionState {
@@ -14,6 +15,8 @@ class SessionState {
     this.milestoneAnswers = const {},
     this.milestoneSummary,
     this.questionnaireSkipped = false,
+    this.consentedAt,
+    this.consentLogId,
   });
 
   /// Enrollment details from the child profile screen.
@@ -28,17 +31,29 @@ class SessionState {
   /// Worker chose to skip the optional questionnaire.
   final bool questionnaireSkipped;
 
+  /// Timestamp of the confirmed parental consent — the consent gate
+  /// timestamp that is also persisted to `consent_logs`.
+  final DateTime? consentedAt;
+
+  /// Local `consent_logs` id for the confirmation, so the row can be
+  /// linked to this session once the session is persisted.
+  final String? consentLogId;
+
   SessionState copyWith({
     ChildProfile? childProfile,
     Map<String, bool>? milestoneAnswers,
     MilestoneSummary? milestoneSummary,
     bool? questionnaireSkipped,
+    DateTime? consentedAt,
+    String? consentLogId,
   }) {
     return SessionState(
       childProfile: childProfile ?? this.childProfile,
       milestoneAnswers: milestoneAnswers ?? this.milestoneAnswers,
       milestoneSummary: milestoneSummary ?? this.milestoneSummary,
       questionnaireSkipped: questionnaireSkipped ?? this.questionnaireSkipped,
+      consentedAt: consentedAt ?? this.consentedAt,
+      consentLogId: consentLogId ?? this.consentLogId,
     );
   }
 }
@@ -67,6 +82,19 @@ class SessionNotifier extends StateNotifier<SessionState> {
 
   void markQuestionnaireSkipped() {
     state = state.copyWith(questionnaireSkipped: true);
+  }
+
+  /// Records that the worker confirmed parental consent on the consent
+  /// screen. [consentLogId] is the local `consent_logs` row id, kept so the
+  /// audit entry can be linked to this session when it is persisted.
+  void recordConsent({
+    required DateTime consentedAt,
+    required String consentLogId,
+  }) {
+    state = state.copyWith(
+      consentedAt: consentedAt,
+      consentLogId: consentLogId,
+    );
   }
 
   void reset() {

@@ -2,7 +2,10 @@ import 'dart:io';
 
 import 'package:earlyecho/core/routes.dart';
 import 'package:earlyecho/core/theme.dart';
+import 'package:earlyecho/data/local/database_helper.dart';
+import 'package:earlyecho/data/repositories/session_repository.dart';
 import 'package:earlyecho/domain/milestone_engine.dart';
+import 'package:earlyecho/presentation/providers/sync_provider.dart';
 import 'package:earlyecho/presentation/screens/child_profile/child_profile_screen.dart';
 import 'package:earlyecho/presentation/screens/consent/consent_screen.dart';
 import 'package:earlyecho/presentation/screens/elicitation/elicitation_screen.dart';
@@ -13,12 +16,26 @@ import 'package:earlyecho/presentation/screens/questionnaire/questionnaire_scree
 import 'package:earlyecho/presentation/screens/referral/referral_screen.dart';
 import 'package:earlyecho/presentation/screens/result/result_screen.dart';
 import 'package:earlyecho/presentation/screens/settings/settings_screen.dart';
+import 'package:earlyecho/services/consent_audio_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+
+/// `just_audio` needs a platform channel widget tests do not have, so the
+/// consent screen talks to this stub through [consentAudioPlayerProvider].
+class _FakeConsentAudioPlayer implements ConsentAudioPlayer {
+  @override
+  Future<void> play() async {}
+
+  @override
+  Future<void> stop() async {}
+}
 
 void main() {
+  setUpAll(sqfliteFfiInit);
+
   /// Hermetic milestone loader — the screen's default loader uses the asset
   /// bundle, which only completes on the first call inside widget tests.
   Future<List<MilestoneQuestion>> testLoader() async {
@@ -28,9 +45,20 @@ void main() {
   }
 
   Widget buildTestApp(String initialLocation) {
+    // In-memory store so the consent step can persist its audit row.
+    final helper = DatabaseHelper(
+      // The no-isolate factory keeps SQLite futures inside the fake-async
+      // zone so they resolve during tester.pump in widget tests.
+      factory: databaseFactoryFfiNoIsolate,
+      databasePath: inMemoryDatabasePath,
+    );
     return ProviderScope(
       overrides: [
         milestoneQuestionsLoaderProvider.overrideWithValue(testLoader),
+        consentAudioPlayerProvider.overrideWithValue(_FakeConsentAudioPlayer()),
+        sessionRepositoryProvider.overrideWithValue(
+          SessionRepository(helper: helper),
+        ),
       ],
       child: MaterialApp.router(
         theme: EarlyEchoTheme.lightTheme,
@@ -98,7 +126,10 @@ void main() {
 
     await tapNext('प्रश्नावली की ओर बढ़ें', QuestionnaireScreen);
     await tapNext('सहमति की ओर बढ़ें', ConsentScreen);
-    await tapNext('अभिभावक ने सहमति दी', ElicitationScreen);
+    // The consent gate: the confirm button only unlocks after the audio
+    // statement has been played once.
+    await tapNext('सहमति का ऑडियो सुनाएँ', ConsentScreen);
+    await tapNext('माता-पिता ने सहमति दी', ElicitationScreen);
     await tapNext('रिकॉर्डिंग शुरू करें', ProcessingScreen);
     await tapNext('परिणाम देखें', ResultScreen);
     await tapNext('रेफरल देखें', ReferralScreen);
