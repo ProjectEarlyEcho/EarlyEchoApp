@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added the Kotlin capture front-end for the native audio pipeline: UnprocessedAudioRecorder opens 16 kHz mono 16-bit PCM on AudioSource.UNPROCESSED with a VOICE_RECOGNITION fallback that reports which source was used, and WebRTCVadBridge produces the 30 ms binary speech/silence frame mask at aggressiveness level 2.
+Declares the RECORD_AUDIO permission; capture degrades to the fallback source instead of failing when the raw source is unavailable.
+
+### 2026-09-18 - Mathew Joseph - pending
 Replaced the elicitation placeholder with the guided three-protocol sequence: worker-tapped starts, per-protocol Hindi instruction audio, explicit countdown ring, protocol X/3 plus overall progress, and a decorative waveform; a testable ElicitationController owns sequencing while the widget drives one-second ticks.
 Finishing all three protocols records the §5.1 protocol_timings onto the session and routes to /processing; playback failures degrade to the on-screen instruction and never block the flow.
 
