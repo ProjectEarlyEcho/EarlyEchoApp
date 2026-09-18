@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added FeatureExtractor and RollingBufferProcessor: segments are labelled ADULT/CHILD via the F0 heuristic (<200 Hz adult, >250 Hz child, ambiguous band excluded), VTTL uses the median of 500 ms-binned adult→child gaps, CVR is child voiced ms over session ms, and each 10 s window (5 s under low memory) runs VAD → diarization → extraction independently.
+Turn math lives in pure-Kotlin companion functions so VTTL/CVR behaviour is JVM-testable without Android classes.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added the diarization and pitch-analysis core: PyannoteRunner wraps ONNX Runtime around the bundled INT8 segmentation model and merges per-frame log-probabilities into voiced turns, while PfvAnalyzer implements YIN F0 tracking, contour cleaning, and z-score normalization across the three EarlyEcho age buckets (12–24, 24–36, 36–60 months).
 Pins onnxruntime-android 1.18.0 and the WebRTC VAD artifact plus JUnit for the JVM tests; speaker labels and biomarker math build on these next.
 
