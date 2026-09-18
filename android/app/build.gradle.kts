@@ -1,3 +1,5 @@
+import java.security.MessageDigest
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -55,3 +57,26 @@ dependencies {
     implementation("com.cloudflare.realtimekit.android-vad:webrtc:2.0.10-cf.4")
     testImplementation("junit:junit:4.13.2")
 }
+
+// The pinned segmentation model is checked at build time. It ships inside the
+// APK assets; the app never downloads a model at runtime.
+tasks.register("verifySegmentationModel") {
+    val model = file("src/main/assets/models/pyannote-segmentation-3.0.onnx")
+    val manifest = file("src/main/assets/models/SHA256SUMS")
+    doLast {
+        check(model.exists()) { "Missing pinned segmentation ONNX model: $model" }
+        check(manifest.exists()) { "Missing model checksum manifest: $manifest" }
+        val expected = manifest.readLines()
+            .firstOrNull { it.endsWith("  pyannote-segmentation-3.0.onnx") }
+            ?.substringBefore("  ")?.trim()
+        check(!expected.isNullOrBlank()) { "Checksum manifest has no model entry" }
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(model.readBytes())
+            .joinToString("") { byte -> "%02x".format(byte) }
+        check(digest.equals(expected, ignoreCase = true)) {
+            "Segmentation model SHA-256 mismatch"
+        }
+    }
+}
+
+tasks.named("preBuild") { dependsOn("verifySegmentationModel") }

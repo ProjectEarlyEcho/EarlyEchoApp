@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Bundled the pinned INT8 segmentation ONNX model under `android/app/src/main/assets/models/` with a SHA256SUMS manifest and a `verifySegmentationModel` Gradle task wired into `preBuild`.
+The APK now carries the diarization model and fails the build if the model or its checksum is missing, so releases never ship an unverifiable model artifact.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added FeatureExtractor and RollingBufferProcessor: segments are labelled ADULT/CHILD via the F0 heuristic (<200 Hz adult, >250 Hz child, ambiguous band excluded), VTTL uses the median of 500 ms-binned adult→child gaps, CVR is child voiced ms over session ms, and each 10 s window (5 s under low memory) runs VAD → diarization → extraction independently.
 Turn math lives in pure-Kotlin companion functions so VTTL/CVR behaviour is JVM-testable without Android classes.
 
