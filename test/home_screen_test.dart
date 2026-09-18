@@ -21,5 +21,6 @@ void main() {
     expect(find.text('निजता पहले'), findsOneWidget);
     expect(find.text('नई स्क्रीनिंग शुरू करें'), findsOneWidget);
     expect(find.text('पुरानी जाँचें देखें'), findsOneWidget);
+    expect(find.text('Start Gemini Live (ESP32 speaker)'), findsOneWidget);
   });
 }

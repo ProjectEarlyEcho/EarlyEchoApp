@@ -50,6 +50,10 @@ dependencies:
   shared_preferences: ^2.5.5
   path: ^1.9.1
   just_audio: ^0.10.6
+  # Raw PCM capture/playback for Gemini Live. Playback follows the phone's
+  # selected audio route, including a paired ESP32 A2DP speaker.
+  record: ^6.2.0
+  flutter_sound: ^9.30.0
 
 dev_dependencies:
   flutter_test:

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_strings.dart';
+import '../../../services/gemini_live_audio_service.dart';
 import '../../providers/locale_provider.dart';
 import '../../widgets/app_ui.dart';
 
@@ -17,6 +18,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = ref.watch(appLocaleProvider);
+    final geminiLive = ref.watch(geminiLiveAudioServiceProvider);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
@@ -135,6 +137,29 @@ class HomeScreen extends ConsumerWidget {
                 icon: const Icon(Icons.history_rounded),
                 label: Text(AppStrings.tr('home_view_history', l10n)),
               ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed:
+                    geminiLive.isConnecting ? null : () => geminiLive.toggle(),
+                icon: Icon(
+                  geminiLive.isRunning
+                      ? Icons.stop_circle_outlined
+                      : Icons.bluetooth_audio_outlined,
+                ),
+                label: Text(
+                  geminiLive.isRunning
+                      ? 'Stop Gemini Live'
+                      : 'Start Gemini Live (ESP32 speaker)',
+                ),
+              ),
+              if (geminiLive.statusMessage != null) ...[
+                const SizedBox(height: 6),
+                Text(
+                  geminiLive.statusMessage!,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
             ],
           ),
         ),

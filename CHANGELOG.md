@@ -4,6 +4,16 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-09-19 - Mathew Hans
+Added a temporary home-screen Gemini Live control that opens a persistent WebSocket, streams 16 kHz PCM microphone audio, and continuously feeds 24 kHz model PCM output to the phone audio route.
+Pairing an ESP32 A2DP sink as a Bluetooth speaker now needs no Flutter Bluetooth transport; microphone uplink is muted while model audio plays to reduce acoustic echo.
+Android capture explicitly uses the microphone source without Bluetooth SCO management, and the app now requests network access for the Live API socket.
+Static analysis has been run with the updated local Flutter SDK; the existing widget suite currently has localisation expectation failures outside this integration.
+Added a home widget assertion so the temporary Gemini Live entry point remains visible.
+Added a gitignored local Dart-defines file for supplying the Gemini API key from Android Studio without committing the secret.
+Serialized Gemini PCM playback writes after a native Android AudioTrack crash caused by overlapping Flutter Sound feed operations.
+Configured Gemini's own automatic activity detection with a 700 ms server-side silence threshold and added live input transcription feedback to diagnose whether the service hears each utterance.
+
 ### 2026-09-18 - Mathew Joseph
 Aligned the screening flow with MozhiMuthal: added the complete MyChild questionnaire engine and dedicated age-based CDC developmental goals, fixed locale-aware English/Hindi rendering, and passed child age into native audio analysis.
 Added per-activity voice skips plus real locale-selected Hindi and English parental-consent audio, each shorter than 15 seconds.
