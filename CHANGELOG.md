@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Wired the audio pipeline method channel in MainActivity: `requestPermission`, `startRecording`, `stopRecording`, and `runPipeline` return the full feature-vector contract (VTTL, PFV semitone SD + z-score, CVR, flags, quality reasons, 256-point waveform, decision trace), with a waveform EventChannel for visual levels.
+Recording runs a rolling-window loop on a single-thread executor with generation guards, low-memory window selection, and permission checks; `analysis_status` is COMPLETE only when voiced/child/transition minimums are met.
+
+### 2026-09-18 - Mathew Joseph - pending
 Bundled the pinned INT8 segmentation ONNX model under `android/app/src/main/assets/models/` with a SHA256SUMS manifest and a `verifySegmentationModel` Gradle task wired into `preBuild`.
 The APK now carries the diarization model and fails the build if the model or its checksum is missing, so releases never ship an unverifiable model artifact.
 
