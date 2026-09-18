@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Scored the result screen from the pipeline outcome: RED/YELLOW/GREEN banner, Hindi explanation, per-biomarker flag chips, referral CTA on RED only, and a retry path for INCOMPLETE analyses instead of a verdict.
+COMPLETE results persist SessionModel to SQLite, link the consent audit row, and refresh the sync queue; persistence failures never blank the result.
+
+### 2026-09-18 - Mathew Joseph - pending
 The processing screen now stops capture, invokes `runPipeline`, parses the feature vector via `SessionFeatures.fromChannelMap`, scores it with `ScoringEngine`, and auto-advances to the result.
 Channel failures surface a retry affordance instead of a screening outcome.
 
