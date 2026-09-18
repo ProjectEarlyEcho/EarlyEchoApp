@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added the EarlyEcho app theme and shared app constants (channel name, protocol timings, age bounds, audio format).
+Establishes the worker-centric visual foundation: India-inspired saffron/teal Material 3 palette, enlarged text, and 48dp+ tap targets for outdoor use.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added a rule to the agent working agreement requiring minimum relevant test coverage per change and non-redundant CI tests.
 Keeps future test and workflow additions focused on what each change actually exercises.
 
