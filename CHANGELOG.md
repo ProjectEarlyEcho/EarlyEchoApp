@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added a SQLite database helper that opens earlyecho.db at version 1 with sessions and consent_logs tables and foreign keys enabled.
+Screening sessions now have a durable on-device store whose schema mirrors the cloud columns, plus a consent audit trail.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added sqflite_common_ffi as a dev dependency so repositories can be tested against an in-memory SQLite database.
 Enables data-layer unit tests to exercise real SQL without a device or emulator.
 
