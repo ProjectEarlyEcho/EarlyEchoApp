@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added unit tests for SessionRepository (in-memory SQLite CRUD round-trips) and SyncRepository (fake upload port covering success, failure, and offline paths).
+Locks in the data-layer contract: 12 new tests cover ordering, sync-flag transitions, cascade deletes, consent logs, and queue draining.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added Riverpod providers for sync state: repository wiring plus a SyncNotifier exposing pending count, isSyncing, and the last sync result.
 The UI can now observe the upload queue and trigger a sync pass when connectivity returns.
 
