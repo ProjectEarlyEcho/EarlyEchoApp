@@ -270,7 +270,7 @@ grant select, insert, update on public.clinical_notes to authenticated;
 create or replace function public.create_care_conversations()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  if tg_table = 'care_team' then
+  if TG_TABLE_NAME = 'care_team' then
     insert into public.conversations (child_id, parent_id, clinician_id)
     select new.child_id, guardian.parent_id, new.clinician_id
     from public.child_guardians guardian

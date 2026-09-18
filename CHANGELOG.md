@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Devadathan M R - pending
+Corrected the care-conversation trigger to use PostgreSQL's built-in table-name trigger variable.
+Guardian and clinician assignments can now create their secure conversations without failing the demo seed.
+
+### 2026-09-18 - Devadathan M R - pending
 Added an idempotent, development-only Supabase demo-data seeder with synthetic parent and clinician accounts.
 It creates linked children, screening histories, appointments, messages, and clinician-only notes for dashboard testing.
 
