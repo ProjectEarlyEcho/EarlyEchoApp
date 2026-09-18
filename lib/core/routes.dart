@@ -9,6 +9,7 @@ import '../presentation/screens/elicitation/elicitation_screen.dart';
 import '../presentation/screens/history/result_history_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
 import '../presentation/screens/language/language_selection_screen.dart';
+import '../presentation/screens/auth/login_screen.dart';
 import '../presentation/screens/processing/processing_screen.dart';
 import '../presentation/screens/questionnaire/questionnaire_screen.dart';
 import '../presentation/screens/referral/referral_screen.dart';
@@ -23,6 +24,7 @@ import '../presentation/screens/settings/settings_screen.dart';
 /// standalone list so tests can spin up routers at any initial location.
 final appRoutes = <GoRoute>[
   GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+  GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
   GoRoute(
     path: '/child-profile',
     builder: (context, state) => const ChildProfileScreen(),

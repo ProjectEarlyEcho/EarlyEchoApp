@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_strings.dart';
+import '../../providers/auth_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../widgets/app_ui.dart';
 
@@ -17,11 +18,26 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = ref.watch(appLocaleProvider);
+    final auth = ref.watch(appAuthProvider);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         title: const Text('EarlyEcho'),
         actions: [
+          if (auth.configured)
+            IconButton(
+              icon: Icon(
+                auth.signedIn ? Icons.logout_rounded : Icons.login_rounded,
+              ),
+              tooltip: auth.signedIn ? 'Sign out' : 'Sign in',
+              onPressed: () async {
+                if (auth.signedIn) {
+                  await ref.read(appAuthProvider.notifier).signOut();
+                } else if (context.mounted) {
+                  context.push('/login');
+                }
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.history_rounded),
             tooltip: AppStrings.tr('tooltip_history', l10n),

@@ -80,7 +80,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       if (consentLogId != null) {
         await repository.attachConsentLogToSession(consentLogId, model.id);
       }
-      await ref.read(syncProvider.notifier).refreshPendingCount();
+      await ref.read(syncProvider.notifier).syncNow();
     } catch (_) {
       // A persistence failure must never blank the result screen; the
       // session stays queued and the next launch re-attempts the write.

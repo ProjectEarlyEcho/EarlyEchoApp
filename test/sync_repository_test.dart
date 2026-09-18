@@ -24,6 +24,15 @@ class FakeScreeningUploader implements ScreeningUploader {
   }
 }
 
+class FakeConsentLogUploader implements ConsentLogUploader {
+  final List<String> uploadedIds = [];
+
+  @override
+  Future<void> uploadConsentLog(ConsentLog log) async {
+    uploadedIds.add(log.id);
+  }
+}
+
 SessionModel buildSession(String id) {
   return SessionModel(
     id: id,
@@ -145,5 +154,27 @@ void main() {
     expect(result.attempted, 0);
     expect(result.remaining, 1);
     expect((await sessions.getSessionById('s-1'))!.syncedToCloud, isFalse);
+  });
+
+  test('linked consent logs are uploaded and marked synced', () async {
+    await sessions.saveSession(buildSession('s-1'));
+    await sessions.logConsent(
+      ConsentLog(
+        id: 'c-1',
+        sessionId: 's-1',
+        consentedAt: DateTime.utc(2026, 9, 19),
+      ),
+    );
+    final consentUploader = FakeConsentLogUploader();
+    final repository = SyncRepository(
+      uploader: FakeScreeningUploader(),
+      consentUploader: consentUploader,
+      sessions: sessions,
+    );
+
+    await repository.syncPending();
+
+    expect(consentUploader.uploadedIds, ['c-1']);
+    expect(await sessions.getUnsyncedConsentLogs(), isEmpty);
   });
 }

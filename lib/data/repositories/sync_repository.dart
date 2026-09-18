@@ -12,20 +12,49 @@ abstract class ScreeningUploader {
   Future<void> upload(SessionModel session);
 }
 
+/// Port for uploading the consent audit records linked to screening sessions.
+abstract class ConsentLogUploader {
+  Future<void> uploadConsentLog(ConsentLog log);
+}
+
 /// Uploads a session to the Supabase `screenings` table.
 ///
 /// Only numeric biomarker columns are sent (see [SessionModel.toJson]) —
 /// never audio and never the child's name.
-class SupabaseScreeningUploader implements ScreeningUploader {
+class SupabaseScreeningUploader
+    implements ScreeningUploader, ConsentLogUploader {
   const SupabaseScreeningUploader(this._client);
 
   final SupabaseClient _client;
 
   static const String table = 'screenings';
+  static const String consentTable = 'consent_logs';
 
   @override
   Future<void> upload(SessionModel session) async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw StateError('Sign in as a care worker before syncing screenings.');
+    }
+    final profile = await _client
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .maybeSingle();
+    final role = profile?['role'] as String?;
+    if (role != 'clinician' && role != 'admin') {
+      throw StateError('Only care workers can sync screening records.');
+    }
     await _client.from(table).upsert(session.toJson());
+  }
+
+  @override
+  Future<void> uploadConsentLog(ConsentLog log) async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw StateError('Sign in as a care worker before syncing consent logs.');
+    }
+    await _client.from(consentTable).upsert(log.toJson());
   }
 }
 
@@ -65,16 +94,33 @@ class SyncResult {
 /// retried on the next pass (e.g. when connectivity returns). No connectivity
 /// gate is applied here — callers invoke [syncPending] when online.
 class SyncRepository {
-  SyncRepository({ScreeningUploader? uploader, SessionRepository? sessions})
-    : _uploader = uploader ?? _defaultUploader(),
-      _sessions = sessions ?? SessionRepository();
+  SyncRepository({
+    ScreeningUploader? uploader,
+    ConsentLogUploader? consentUploader,
+    SessionRepository? sessions,
+  }) : _uploader = uploader ?? _defaultUploader(),
+       _consentUploader =
+           consentUploader ??
+           (uploader is ConsentLogUploader
+               ? uploader as ConsentLogUploader
+               : _defaultConsentUploader()),
+       _sessions = sessions ?? SessionRepository();
 
   final ScreeningUploader? _uploader;
+  final ConsentLogUploader? _consentUploader;
   final SessionRepository _sessions;
 
   /// Uses the initialized global Supabase client, or null when Supabase has
   /// not been initialized yet (no project credentials are configured).
   static ScreeningUploader? _defaultUploader() {
+    try {
+      return SupabaseScreeningUploader(Supabase.instance.client);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static ConsentLogUploader? _defaultConsentUploader() {
     try {
       return SupabaseScreeningUploader(Supabase.instance.client);
     } catch (_) {
@@ -111,6 +157,18 @@ class SyncRepository {
         uploaded++;
       } catch (_) {
         failed++;
+      }
+    }
+
+    final consentUploader = _consentUploader;
+    if (consentUploader != null) {
+      for (final log in await _sessions.getUnsyncedConsentLogs()) {
+        try {
+          await consentUploader.uploadConsentLog(log);
+          await _sessions.markConsentLogSynced(log.id);
+        } catch (_) {
+          // Keep the local consent audit record queued for the next pass.
+        }
       }
     }
 

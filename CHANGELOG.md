@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Mathew Joseph
+Added parent and care-worker authentication against the shared Supabase profiles and role contract, with an idempotent mobile access migration.
+Completed screening and linked consent-audit records now sync after persistence and retry after a care-worker signs in.
+
+### 2026-09-19 - Mathew Joseph
 Updated widget-test locale defaults and navigation expectations for the guided questionnaire and developmental-goals stage.
 The CI suite now exercises the selected-language flow without stale screen assumptions.
 

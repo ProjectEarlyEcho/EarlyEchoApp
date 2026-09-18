@@ -166,6 +166,29 @@ class SessionRepository {
     );
   }
 
+  /// Consent logs whose linked screening has not yet reached the cloud.
+  Future<List<ConsentLog>> getUnsyncedConsentLogs() async {
+    final db = await _helper.database;
+    final maps = await db.query(
+      DatabaseHelper.tableConsentLogs,
+      where: 'synced = ? AND session_id IS NOT NULL',
+      whereArgs: [0],
+      orderBy: 'consented_at ASC',
+    );
+    return maps.map(ConsentLog.fromMap).toList();
+  }
+
+  /// Marks a consent audit record as uploaded after a successful cloud write.
+  Future<void> markConsentLogSynced(String consentLogId) async {
+    final db = await _helper.database;
+    await db.update(
+      DatabaseHelper.tableConsentLogs,
+      {'synced': 1},
+      where: 'id = ?',
+      whereArgs: [consentLogId],
+    );
+  }
+
   Future<List<ConsentLog>> getConsentLogsForSession(String sessionId) async {
     final db = await _helper.database;
     final maps = await db.query(
