@@ -1,0 +1,118 @@
+{
+  "version": 1,
+  "source": "CDC developmental milestones (2022 checklist), adapted for ages 12–60 months",
+  "questions": [
+    {
+      "id": "q_pull_to_stand",
+      "age_min_months": 12,
+      "age_max_months": 18,
+      "domain": "motor",
+      "question_hi": "क्या बच्चा किसी चीज़ को पकड़कर खड़ा होता है?"
+    },
+    {
+      "id": "q_waves_bye",
+      "age_min_months": 12,
+      "age_max_months": 20,
+      "domain": "social",
+      "question_hi": "क्या बच्चा 'टा-टा' या 'बाय-बाय' करने के लिए हाथ हिलाता है?"
+    },
+    {
+      "id": "q_calls_parent",
+      "age_min_months": 12,
+      "age_max_months": 20,
+      "domain": "language",
+      "question_hi": "क्या बच्चा माता-पिता को 'मम्मी', 'पापा' या किसी खास नाम से बुलाता है?"
+    },
+    {
+      "id": "q_understands_no",
+      "age_min_months": 12,
+      "age_max_months": 20,
+      "domain": "language",
+      "question_hi": "क्या बच्चा 'नहीं' कहने पर रुक जाता है या ठहर जाता है?"
+    },
+    {
+      "id": "q_finds_hidden_toy",
+      "age_min_months": 12,
+      "age_max_months": 20,
+      "domain": "cognitive",
+      "question_hi": "क्या बच्चा कपड़े के नीचे छिपाई गई चीज़, जैसे खिलौना, को ढूँढता है?"
+    },
+    {
+      "id": "q_walks_alone",
+      "age_min_months": 15,
+      "age_max_months": 30,
+      "domain": "motor",
+      "question_hi": "क्या बच्चा बिना सहारे के कुछ कदम चलता है?"
+    },
+    {
+      "id": "q_points_to_ask",
+      "age_min_months": 15,
+      "age_max_months": 30,
+      "domain": "language",
+      "question_hi": "क्या बच्चा कुछ माँगने या मदद के लिए उंगली से इशारा करता है?"
+    },
+    {
+      "id": "q_stacks_blocks",
+      "age_min_months": 15,
+      "age_max_months": 30,
+      "domain": "cognitive",
+      "question_hi": "क्या बच्चा एक के ऊपर एक करके 2 छोटी चीज़ें रख सकता है?"
+    },
+    {
+      "id": "q_uses_objects",
+      "age_min_months": 18,
+      "age_max_months": 36,
+      "domain": "cognitive",
+      "question_hi": "क्या बच्चा चीज़ों को सही तरीके से इस्तेमाल करता है, जैसे कप से पीना या कंघी से बाल बनाना?"
+    },
+    {
+      "id": "q_two_word_phrases",
+      "age_min_months": 24,
+      "age_max_months": 42,
+      "domain": "language",
+      "question_hi": "क्या बच्चा दो शब्दों को जोड़कर बोलता है, जैसे 'पानी दो' या 'मम्मी आओ'?"
+    },
+    {
+      "id": "q_kicks_ball",
+      "age_min_months": 24,
+      "age_max_months": 42,
+      "domain": "motor",
+      "question_hi": "क्या बच्चा गेंद को लात मारता है?"
+    },
+    {
+      "id": "q_points_to_picture",
+      "age_min_months": 24,
+      "age_max_months": 42,
+      "domain": "language",
+      "question_hi": "क्या बच्चा किताब में किसी चीज़ का नाम सुनकर उसके चित्र की ओर इशारा करता है?"
+    },
+    {
+      "id": "q_two_step_instructions",
+      "age_min_months": 30,
+      "age_max_months": 48,
+      "domain": "language",
+      "question_hi": "क्या बच्चा दो-चरण वाले निर्देश मानता है, जैसे 'किताब उठाओ और मुझे दो'?"
+    },
+    {
+      "id": "q_pretend_play",
+      "age_min_months": 36,
+      "age_max_months": 60,
+      "domain": "social",
+      "question_hi": "क्या बच्चा कल्पना का खेल खेलता है, जैसे खिलौना फ़ोन पर बात करना या गाड़ी चलाना?"
+    },
+    {
+      "id": "q_takes_turns",
+      "age_min_months": 36,
+      "age_max_months": 60,
+      "domain": "social",
+      "question_hi": "क्या बच्चा खेल में अन्य बच्चों के साथ बारी-बारी से खेलता है?"
+    },
+    {
+      "id": "q_speaks_clearly",
+      "age_min_months": 36,
+      "age_max_months": 60,
+      "domain": "language",
+      "question_hi": "क्या बच्चा इतना साफ़ बोलता है कि घर के बाहर के लोग उसे समझ सकें?"
+    }
+  ]
+}
