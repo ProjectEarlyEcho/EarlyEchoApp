@@ -47,3 +47,11 @@ kotlin {
 flutter {
     source = "../.."
 }
+
+dependencies {
+    // On-device ONNX inference for the bundled speaker-segmentation model.
+    implementation("com.microsoft.onnxruntime:onnxruntime-android:1.18.0")
+    // Prebuilt WebRTC VAD artifact used by the frame-level speech mask.
+    implementation("com.cloudflare.realtimekit.android-vad:webrtc:2.0.10-cf.4")
+    testImplementation("junit:junit:4.13.2")
+}

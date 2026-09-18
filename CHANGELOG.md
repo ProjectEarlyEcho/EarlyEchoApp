@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added the diarization and pitch-analysis core: PyannoteRunner wraps ONNX Runtime around the bundled INT8 segmentation model and merges per-frame log-probabilities into voiced turns, while PfvAnalyzer implements YIN F0 tracking, contour cleaning, and z-score normalization across the three EarlyEcho age buckets (12–24, 24–36, 36–60 months).
+Pins onnxruntime-android 1.18.0 and the WebRTC VAD artifact plus JUnit for the JVM tests; speaker labels and biomarker math build on these next.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added the Kotlin capture front-end for the native audio pipeline: UnprocessedAudioRecorder opens 16 kHz mono 16-bit PCM on AudioSource.UNPROCESSED with a VOICE_RECOGNITION fallback that reports which source was used, and WebRTCVadBridge produces the 30 ms binary speech/silence frame mask at aggressiveness level 2.
 Declares the RECORD_AUDIO permission; capture degrades to the fallback source instead of failing when the raw source is unavailable.
 
