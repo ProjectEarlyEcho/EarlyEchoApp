@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-18 - Mathew Joseph - pending
+Added a pure-Dart milestone engine (age filtering, yes/no tally, normal/warning status) plus a Hindi CDC-milestone question asset.
+The optional questionnaire now has a scoring contract: two or more missed age-applicable milestones flag a warning context that never gates the acoustic result.
+
+### 2026-09-18 - Mathew Joseph - pending
 Added unit tests for SessionRepository (in-memory SQLite CRUD round-trips) and SyncRepository (fake upload port covering success, failure, and offline paths).
 Locks in the data-layer contract: 12 new tests cover ordering, sync-flag transitions, cascade deletes, consent logs, and queue draining.
 
