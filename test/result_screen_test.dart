@@ -1,6 +1,7 @@
 import 'package:earlyecho/core/theme.dart';
 import 'package:earlyecho/data/models/biomarker_result.dart';
 import 'package:earlyecho/data/models/session_features.dart';
+import 'package:earlyecho/domain/milestone_engine.dart';
 import 'package:earlyecho/presentation/providers/session_provider.dart';
 import 'package:earlyecho/presentation/screens/result/result_screen.dart';
 import 'package:flutter/material.dart';
@@ -14,9 +15,17 @@ void main() {
     routes: [GoRoute(path: '/result', builder: (_, _) => const ResultScreen())],
   );
 
-  ProviderContainer containerWith(BiomarkerResult result) {
+  ProviderContainer containerWith(
+    BiomarkerResult result, {
+    MilestoneSummary? questionnaire,
+  }) {
     final container = ProviderContainer();
     addTearDown(container.dispose);
+    if (questionnaire != null) {
+      container
+          .read(sessionProvider.notifier)
+          .setQuestionnaire(const {}, questionnaire);
+    }
     const features = SessionFeatures(
       vttlMs: 1450,
       pfvStd: 20.0,
@@ -75,8 +84,58 @@ void main() {
     expect(find.text('1450 ms'), findsOneWidget);
     expect(find.text('0.050'), findsOneWidget);
     expect(find.text('20.0 ST'), findsOneWidget);
+    expect(find.text('संयुक्त स्क्रीनिंग सारांश'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel('वीडियो गुणवत्ता: वीडियो गुणवत्ता उपलब्ध नहीं'),
+      findsOneWidget,
+    );
     expect(find.text('रेफरल बनाएँ'), findsOneWidget);
   });
+
+  testWidgets(
+    'questionnaire concerns elevate GREEN audio to clinician review',
+    (tester) async {
+      const audioResult = BiomarkerResult(
+        riskLevel: RiskLevel.green,
+        vttlFlagged: false,
+        pfvFlagged: false,
+        cvrFlagged: false,
+        hindiExplanation: '',
+      );
+      const questionnaire = MilestoneSummary(
+        totalApplicable: 4,
+        answeredYes: 2,
+        answeredNo: 2,
+        status: MilestoneStatus.warning,
+      );
+      final container = containerWith(
+        audioResult,
+        questionnaire: questionnaire,
+      );
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            theme: EarlyEchoTheme.lightTheme,
+            routerConfig: testRouter(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('पीला — एक चिंता का संकेत'), findsOneWidget);
+      expect(
+        find.bySemanticsLabel('प्रश्नावली: 2 विकास संबंधी चिंताएँ दर्ज'),
+        findsOneWidget,
+      );
+      expect(
+        find.bySemanticsLabel('अगला कदम: चिकित्सकीय समीक्षा की सलाह'),
+        findsOneWidget,
+      );
+      expect(find.text('रेफरल बनाएँ'), findsNothing);
+    },
+  );
 
   testWidgets('incomplete analysis shows retry, never a verdict', (
     tester,

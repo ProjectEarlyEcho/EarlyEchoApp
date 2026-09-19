@@ -66,7 +66,8 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
   ///
   /// The first protocol also opens the independent microphone and camera
   /// pipelines. Either optional capture can fail without blocking the guided
-  /// sequence; video is quality context only and never affects audio scoring.
+  /// sequence; video supplies framing quality to the combined assessment,
+  /// never an audio or behavioural risk score.
   Future<void> _startProtocol() async {
     final state = ref.read(elicitationControllerProvider);
     if (state.running || state.completed) return;

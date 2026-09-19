@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_strings.dart';
 import '../../../data/models/session_features.dart';
+import '../../../domain/combined_scoring_engine.dart';
 import '../../../domain/scoring_engine.dart';
 import '../../../services/audio_pipeline_service.dart';
 import '../../../services/video_pipeline_service.dart';
@@ -14,10 +15,11 @@ import '../../widgets/app_ui.dart';
 /// Step 5 of the screening flow — on-device analysis of the recording.
 ///
 /// Stops the native capture, invokes `runPipeline`, parses the feature
-/// vector with [SessionFeatures.fromChannelMap], scores it via
-/// [ScoringEngine], and forwards to `/result`. A channel failure leaves a
-/// retry affordance instead of a result — an errored analysis never
-/// produces a screening outcome.
+/// vector with [SessionFeatures.fromChannelMap], evaluates audio with
+/// [ScoringEngine], then combines it with questionnaire and video-quality
+/// context before forwarding to `/result`. An audio-channel failure leaves a
+/// retry affordance instead of a result — an errored analysis never produces
+/// a screening outcome.
 class ProcessingScreen extends ConsumerStatefulWidget {
   const ProcessingScreen({super.key});
 
@@ -43,8 +45,8 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
       await AudioPipelineService.stopRecording();
       Map<String, dynamic> videoQuality;
       try {
-        // Video quality is independent context. A camera failure never changes
-        // the acoustic feature vector, its status, or the screening result.
+        // Video is never a behavioural or diagnostic score. It is captured as
+        // transparent framing-quality context for the combined assessment.
         videoQuality = await VideoPipelineService.stopAnalysis();
       } on VideoPipelineException {
         videoQuality = const <String, dynamic>{
@@ -60,11 +62,18 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
         ..['video_quality'] = videoQuality;
       final features = SessionFeatures.fromChannelMap(raw);
       final result = ScoringEngine.score(features);
+      final combined = CombinedScoringEngine.score(
+        audioResult: result,
+        milestoneSummary: session.milestoneSummary,
+        questionnaireSkipped: session.questionnaireSkipped,
+        videoQuality: videoQuality,
+      );
       ref
           .read(sessionProvider.notifier)
           .recordAnalysisResult(
             features: features,
             result: result,
+            combinedResult: combined,
             rawResponse: raw,
           );
       if (!mounted) return;

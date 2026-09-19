@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Devadathan M R - pending
+Added an explainable combined assessment that brings questionnaire concerns and local video capture quality into the screening result.
+Questionnaire concerns can request clinician review, while the audio-only DEIC referral rule and video privacy safeguards remain intact.
+
+### 2026-09-19 - Devadathan M R - pending
 Removed the duplicated large wordmark from the home-screen hero while retaining the compact app-bar mark and Android launcher icon.
 The hero returns to its neutral hearing cue, keeping the call to action focused without repeating the product identity.
 

@@ -25,7 +25,8 @@ Flutter App (Android)  →  Kotlin Native Pipeline  →  Scoring Engine (Dart)
 |-------|-----------|
 | **Mobile App** | Flutter, Riverpod, GoRouter, sqflite |
 | **Native Audio** | Kotlin, AudioSource.UNPROCESSED, WebRTC VAD, Pyannote ONNX (INT8) |
-| **Scoring** | Dart — threshold rules on VTTL, PFV, CVR biomarkers |
+| **Native Video** | CameraX, ML Kit face and pose detection; aggregate framing quality only |
+| **Scoring** | Dart — explainable audio risk, questionnaire review signals, and video capture confidence |
 | **Cloud** | Supabase (Postgres + Auth + RLS) |
 | **Dashboard** | Next.js 16, Tailwind CSS 4, shadcn/ui |
 | **Referrals** | PDF generation + WhatsApp deep link sharing |
@@ -56,8 +57,8 @@ earlyecho/
 2. **Child Profile** — Name (optional), age (12–60 months), Anganwadi ID, district
 3. **Consent** — Malayalam audio plays, worker confirms parent consent
 4. **Elicitation** — 3 protocols: Rattle (60s), Toy Hide (80s), Imitation (60s)
-5. **Processing** — Native pipeline: VAD → Diarize → Feature Extract → Score
-6. **Result** — RED / YELLOW / GREEN with Malayalam explanation + biomarker chips
+5. **Processing** — Native audio pipeline plus local video framing-quality analysis
+6. **Result** — Explainable RED / YELLOW / GREEN assessment with audio, questionnaire, and video-quality inputs
 7. **Referral** (RED only) — PDF letter with nearest DEIC address, WhatsApp share
 
 
@@ -109,5 +110,6 @@ npm run dev
 
 - Zero audio leaves the device
 - Only 1D numeric feature vectors are synced to cloud
+- No raw video, frames, facial landmarks, or pose landmarks are stored or synced
 - No child name transmitted unless explicitly enabled
 - DPDP Act 2023 compliant
