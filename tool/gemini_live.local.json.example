@@ -1,0 +1,4 @@
+{
+  "GEMINI_API_KEY": "your-gemini-api-key",
+  "ESP32_AUDIO_WS_URL": "ws://10.2.0.19:81"
+}

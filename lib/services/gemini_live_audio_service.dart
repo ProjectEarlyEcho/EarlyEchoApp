@@ -1,47 +1,58 @@
 import 'dart:async';
-import 'dart:collection';
 import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_sound/flutter_sound.dart';
 import 'package:record/record.dart';
 
-/// Maintains a Gemini Live audio session whose output follows the operating
-/// system audio route. Pair the ESP32 A2DP sink as a Bluetooth speaker; no
-/// Bluetooth transport is implemented in Flutter.
+import 'esp32_audio_streamer.dart';
+
+/// Maintains a Gemini Live microphone session and sends model audio to an
+/// ESP32-S3 WebSocket speaker as 24 kHz, signed 16-bit mono PCM.
 final geminiLiveAudioServiceProvider =
     ChangeNotifierProvider.autoDispose<GeminiLiveAudioService>((ref) {
       final service = GeminiLiveAudioService(
         apiKey: const String.fromEnvironment('GEMINI_API_KEY'),
+        esp32Endpoint: Uri.parse(
+          const String.fromEnvironment(
+            'ESP32_AUDIO_WS_URL',
+            defaultValue: 'ws://10.2.0.19:81',
+          ),
+        ),
       );
       ref.onDispose(service.dispose);
       return service;
     });
 
 class GeminiLiveAudioService extends ChangeNotifier {
-  GeminiLiveAudioService({required String apiKey}) : _apiKey = apiKey;
+  GeminiLiveAudioService({
+    required String apiKey,
+    required Uri esp32Endpoint,
+    Esp32AudioStreamer? esp32Audio,
+  }) : _apiKey = apiKey,
+       _esp32Endpoint = esp32Endpoint {
+    _esp32Audio =
+        esp32Audio ??
+        Esp32AudioStreamer(
+          endpoint: esp32Endpoint,
+          onError: _handleEsp32Error,
+          onDisconnected: _handleEsp32Disconnected,
+        );
+  }
 
   static const _inputSampleRate = 16000;
-  static const _outputSampleRate = 24000;
-  static const _bytesPerSample = 2;
   static const _model = 'gemini-3.8-live';
 
   final String _apiKey;
+  final Uri _esp32Endpoint;
   final AudioRecorder _recorder = AudioRecorder();
-  final FlutterSoundPlayer _player = FlutterSoundPlayer();
+  late final Esp32AudioStreamer _esp32Audio;
 
-  WebSocket? _socket;
-  StreamSubscription<dynamic>? _socketSubscription;
+  WebSocket? _geminiSocket;
+  StreamSubscription<dynamic>? _geminiSubscription;
   StreamSubscription<Uint8List>? _microphoneSubscription;
-  Timer? _silenceTimer;
-  final Queue<Uint8List> _outputQueue = Queue<Uint8List>();
-  bool _isDrainingOutput = false;
-  int _playbackGeneration = 0;
-  bool _playerReady = false;
   bool _disposed = false;
-  DateTime _microphoneMutedUntil = DateTime.fromMillisecondsSinceEpoch(0);
 
   bool isConnecting = false;
   bool isRunning = false;
@@ -52,64 +63,26 @@ class GeminiLiveAudioService extends ChangeNotifier {
   Future<void> start() async {
     if (isConnecting || isRunning) return;
     if (_apiKey.isEmpty) {
-      _setStatus('Missing GEMINI_API_KEY. Start with --dart-define.');
+      _setStatus('Missing GEMINI_API_KEY. Start with --dart-define-from-file.');
       return;
     }
 
     isConnecting = true;
-    statusMessage = 'Connecting to Gemini Live…';
+    statusMessage = 'Connecting to ESP32 speaker…';
     notifyListeners();
     try {
-      await _openPlayer();
-      final endpoint = Uri.parse(
-        'wss://generativelanguage.googleapis.com/ws/'
-        'google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',
-      ).replace(queryParameters: {'key': _apiKey});
-      final socket = await WebSocket.connect(endpoint.toString());
-      _socket = socket;
-      final setupComplete = Completer<void>();
-      _socketSubscription = socket.listen(
-        (message) => _handleServerMessage(message, setupComplete),
-        onDone: () => _handleSocketClosed(setupComplete),
-        onError: (Object error) => _handleSocketError(error, setupComplete),
-        cancelOnError: false,
-      );
-      socket.add(
-        jsonEncode({
-          'setup': {
-            'model': 'models/$_model',
-            'generationConfig': {
-              'responseModalities': ['AUDIO'],
-            },
-            'realtimeInputConfig': {
-              'automaticActivityDetection': {
-                'disabled': false,
-                'startOfSpeechSensitivity': 'START_SENSITIVITY_HIGH',
-                'endOfSpeechSensitivity': 'END_SENSITIVITY_HIGH',
-                'prefixPaddingMs': 100,
-                'silenceDurationMs': 700,
-              },
-              'turnCoverage': 'TURN_INCLUDES_ONLY_ACTIVITY',
-            },
-            'inputAudioTranscription': {},
-            'systemInstruction': {
-              'parts': [
-                {
-                  'text':
-                      'Always respond when the user speaks, including to short greetings. Respond conversationally and briefly. Your audio is played on a paired Bluetooth speaker.',
-                },
-              ],
-            },
-          },
-        }),
-      );
-      await setupComplete.future.timeout(const Duration(seconds: 15));
+      await _esp32Audio.connect().timeout(const Duration(seconds: 8));
+      statusMessage = 'Connecting to Gemini Live…';
+      notifyListeners();
+      await _connectGemini();
+      if (!_esp32Audio.isConnected) {
+        throw StateError('ESP32 speaker disconnected during startup.');
+      }
       await _startMicrophone();
-      _startSilenceFeed();
       isRunning = true;
-      statusMessage = 'Listening — audio plays through the selected speaker.';
+      statusMessage = 'Listening — responses stream to ${_esp32Endpoint.host}.';
     } catch (error) {
-      await _stopInternal(closePlayer: true);
+      await _stopInternal();
       statusMessage = 'Gemini Live could not start: $error';
     } finally {
       isConnecting = false;
@@ -118,24 +91,57 @@ class GeminiLiveAudioService extends ChangeNotifier {
   }
 
   Future<void> stop() async {
-    await _stopInternal(closePlayer: true);
+    await _stopInternal();
     if (!_disposed) {
       statusMessage = 'Gemini Live stopped.';
       notifyListeners();
     }
   }
 
-  Future<void> _openPlayer() async {
-    if (_playerReady) return;
-    await _player.openPlayer();
-    await _player.startPlayerFromStream(
-      codec: Codec.pcm16,
-      numChannels: 1,
-      sampleRate: _outputSampleRate,
-      interleaved: true,
-      bufferSize: 8192,
+  Future<void> _connectGemini() async {
+    final endpoint = Uri.parse(
+      'wss://generativelanguage.googleapis.com/ws/'
+      'google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent',
+    ).replace(queryParameters: {'key': _apiKey});
+    final socket = await WebSocket.connect(endpoint.toString());
+    _geminiSocket = socket;
+    final setupComplete = Completer<void>();
+    _geminiSubscription = socket.listen(
+      (message) => _handleServerMessage(message, setupComplete),
+      onDone: () => _handleGeminiClosed(setupComplete),
+      onError: (Object error) => _handleGeminiError(error, setupComplete),
+      cancelOnError: false,
     );
-    _playerReady = true;
+    socket.add(
+      jsonEncode({
+        'setup': {
+          'model': 'models/$_model',
+          'generationConfig': {
+            'responseModalities': ['AUDIO'],
+          },
+          'realtimeInputConfig': {
+            'automaticActivityDetection': {
+              'disabled': false,
+              'startOfSpeechSensitivity': 'START_SENSITIVITY_HIGH',
+              'endOfSpeechSensitivity': 'END_SENSITIVITY_HIGH',
+              'prefixPaddingMs': 100,
+              'silenceDurationMs': 700,
+            },
+            'turnCoverage': 'TURN_INCLUDES_ONLY_ACTIVITY',
+          },
+          'inputAudioTranscription': {},
+          'systemInstruction': {
+            'parts': [
+              {
+                'text':
+                    'Always respond when the user speaks, including to short greetings. Respond conversationally and briefly. Your audio is played on an external ESP32 speaker.',
+              },
+            ],
+          },
+        },
+      }),
+    );
+    await setupComplete.future.timeout(const Duration(seconds: 15));
   }
 
   Future<void> _startMicrophone() async {
@@ -166,10 +172,9 @@ class GeminiLiveAudioService extends ChangeNotifier {
   }
 
   void _sendMicrophoneChunk(Uint8List bytes) {
-    if (_socket == null || DateTime.now().isBefore(_microphoneMutedUntil)) {
-      return;
-    }
-    _socket!.add(
+    final socket = _geminiSocket;
+    if (socket == null) return;
+    socket.add(
       jsonEncode({
         'realtimeInput': {
           'audio': {
@@ -194,11 +199,22 @@ class GeminiLiveAudioService extends ChangeNotifier {
       return;
     }
     final error = payload['error'];
-    if (error != null && !setupComplete.isCompleted) {
-      setupComplete.completeError(StateError(error.toString()));
+    if (error != null) {
+      if (!setupComplete.isCompleted) {
+        setupComplete.completeError(StateError(error.toString()));
+      } else {
+        _setStatus('Gemini Live error: $error');
+      }
       return;
     }
+
     final serverContent = payload['serverContent'] as Map<String, dynamic>?;
+    if (serverContent?['interrupted'] == true) {
+      unawaited(_esp32Audio.flush());
+      statusMessage = 'Interrupted — flushing ESP32 audio…';
+      notifyListeners();
+    }
+
     final transcription =
         (serverContent?['interimInputTranscription'] ??
                 serverContent?['inputTranscription'])
@@ -210,9 +226,10 @@ class GeminiLiveAudioService extends ChangeNotifier {
     }
     if (serverContent?['turnComplete'] == true ||
         serverContent?['waitingForInput'] == true) {
-      statusMessage = 'Listening — audio plays through the selected speaker.';
+      statusMessage = 'Listening — responses stream to ${_esp32Endpoint.host}.';
       notifyListeners();
     }
+
     final modelTurn = serverContent?['modelTurn'] as Map<String, dynamic>?;
     final modelParts = modelTurn?['parts'] as List<dynamic>?;
     if (modelParts == null) return;
@@ -220,67 +237,20 @@ class GeminiLiveAudioService extends ChangeNotifier {
       final inlineData =
           (part as Map<String, dynamic>)['inlineData'] as Map<String, dynamic>?;
       final encoded = inlineData?['data'] as String?;
-      if (encoded != null) _playModelAudio(base64Decode(encoded));
+      if (encoded != null) _sendModelAudioToEsp32(base64Decode(encoded));
     }
   }
 
-  void _playModelAudio(Uint8List bytes) {
-    if (!_playerReady || bytes.isEmpty) return;
-    if (statusMessage != 'Gemini is responding…') {
-      statusMessage = 'Gemini is responding…';
+  void _sendModelAudioToEsp32(Uint8List bytes) {
+    if (bytes.isEmpty) return;
+    if (statusMessage != 'Gemini is responding through ESP32…') {
+      statusMessage = 'Gemini is responding through ESP32…';
       notifyListeners();
     }
-    _feedOutput(bytes);
-    final milliseconds =
-        (bytes.length * 1000 ~/ (_outputSampleRate * _bytesPerSample)) + 200;
-    final now = DateTime.now();
-    final queueEnd = _microphoneMutedUntil.isAfter(now)
-        ? _microphoneMutedUntil
-        : now;
-    _microphoneMutedUntil = queueEnd.add(Duration(milliseconds: milliseconds));
+    _esp32Audio.enqueue(bytes);
   }
 
-  void _startSilenceFeed() {
-    final silence = Uint8List(_outputSampleRate ~/ 10 * _bytesPerSample);
-    _silenceTimer = Timer.periodic(const Duration(milliseconds: 100), (_) {
-      if (_playerReady && DateTime.now().isAfter(_microphoneMutedUntil)) {
-        // Never queue idle audio behind a model response. One small silence
-        // buffer keeps the A2DP media stream alive while waiting for speech.
-        if (_outputQueue.isEmpty) _feedOutput(silence);
-      }
-    });
-  }
-
-  void _feedOutput(Uint8List bytes) {
-    _outputQueue.add(bytes);
-    if (!_isDrainingOutput) unawaited(_drainOutputQueue());
-  }
-
-  Future<void> _drainOutputQueue() async {
-    _isDrainingOutput = true;
-    final generation = _playbackGeneration;
-    try {
-      while (_playerReady &&
-          generation == _playbackGeneration &&
-          _outputQueue.isNotEmpty) {
-        await _player.feedUint8FromStream(_outputQueue.removeFirst());
-      }
-    } catch (error) {
-      if (!_disposed && generation == _playbackGeneration) {
-        statusMessage = 'Audio playback error: $error';
-        notifyListeners();
-      }
-    } finally {
-      _isDrainingOutput = false;
-      if (_playerReady &&
-          generation == _playbackGeneration &&
-          _outputQueue.isNotEmpty) {
-        unawaited(_drainOutputQueue());
-      }
-    }
-  }
-
-  void _handleSocketClosed(Completer<void> setupComplete) {
+  void _handleGeminiClosed(Completer<void> setupComplete) {
     if (!setupComplete.isCompleted) {
       setupComplete.completeError(
         StateError('Gemini closed the connection before setup completed.'),
@@ -293,9 +263,38 @@ class GeminiLiveAudioService extends ChangeNotifier {
     }
   }
 
-  void _handleSocketError(Object error, Completer<void> setupComplete) {
+  void _handleGeminiError(Object error, Completer<void> setupComplete) {
     if (!setupComplete.isCompleted) setupComplete.completeError(error);
     statusMessage = 'Gemini Live connection error: $error';
+    if (!_disposed) notifyListeners();
+  }
+
+  void _handleEsp32Error(Object error) {
+    if (isRunning) {
+      unawaited(
+        _shutdownAfterEsp32Failure('ESP32 audio connection error: $error'),
+      );
+    } else {
+      _setStatus('ESP32 audio connection error: $error');
+    }
+  }
+
+  void _handleEsp32Disconnected() {
+    if (!isRunning) return;
+    unawaited(
+      _shutdownAfterEsp32Failure(
+        'ESP32 speaker disconnected. Start again to reconnect.',
+      ),
+    );
+  }
+
+  Future<void> _shutdownAfterEsp32Failure(String message) async {
+    isRunning = false;
+    isConnecting = true;
+    statusMessage = message;
+    if (!_disposed) notifyListeners();
+    await _stopInternal();
+    isConnecting = false;
     if (!_disposed) notifyListeners();
   }
 
@@ -304,30 +303,22 @@ class GeminiLiveAudioService extends ChangeNotifier {
     if (!_disposed) notifyListeners();
   }
 
-  Future<void> _stopInternal({required bool closePlayer}) async {
-    _playbackGeneration++;
-    _outputQueue.clear();
-    _silenceTimer?.cancel();
-    _silenceTimer = null;
+  Future<void> _stopInternal() async {
     await _microphoneSubscription?.cancel();
     _microphoneSubscription = null;
     if (await _recorder.isRecording()) await _recorder.stop();
-    await _socketSubscription?.cancel();
-    _socketSubscription = null;
-    await _socket?.close();
-    _socket = null;
-    if (closePlayer && _playerReady) {
-      await _player.stopPlayer();
-      await _player.closePlayer();
-      _playerReady = false;
-    }
+    await _geminiSubscription?.cancel();
+    _geminiSubscription = null;
+    await _geminiSocket?.close();
+    _geminiSocket = null;
+    await _esp32Audio.close();
     isRunning = false;
   }
 
   @override
   void dispose() {
     _disposed = true;
-    unawaited(_stopInternal(closePlayer: true));
+    unawaited(_stopInternal());
     unawaited(_recorder.dispose());
     super.dispose();
   }

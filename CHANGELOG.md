@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Mathew Hans
+Replaced phone/A2DP model-audio playback with a paced ESP32-S3 WebSocket transport that sends 24 kHz PCM in 40 ms binary chunks with a 300 ms lead buffer.
+Gemini reception and ESP32 transmission now run independently; barge-in clears queued audio and sends the speaker a `flush` command, while the ESP endpoint is configurable through `ESP32_AUDIO_WS_URL`.
+
+### 2026-09-19 - Mathew Hans
 Added `hardware/cardsensor.ino`, an ESP32 Hall-effect card sensor sketch with startup baseline calibration, NORTH/SOUTH classification, a deadzone, and rolling majority filtering.
 
 ### 2026-09-19 - Mathew Hans
