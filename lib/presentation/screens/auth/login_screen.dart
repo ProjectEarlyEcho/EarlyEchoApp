@@ -46,7 +46,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     }
     if (!mounted || !ref.read(appAuthProvider).signedIn) return;
-    if (ref.read(appAuthProvider).canSyncScreenings) {
+    if (ref.read(appAuthProvider).signedIn) {
       await ref.read(syncProvider.notifier).syncNow();
     }
     if (mounted) context.go('/');

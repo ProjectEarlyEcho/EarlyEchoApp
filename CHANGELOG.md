@@ -28,6 +28,14 @@ The preview now rebinds when Android recreates its drawing surface, preventing t
 Added a parallel, on-device video-quality stream to guided elicitation with a live camera preview and CameraX/ML Kit processing.
 It retains only aggregate framing and movement context in the session trace; raw video and landmarks are discarded, while audio capture and scoring remain unchanged.
 The Android CI check now compiles the native integration, and the Flutter dependency range supports the current stable SDK.
+### 2026-09-19 - Mathew Joseph - pending
+Added a Render Blueprint for the dashboard's Node service with its Supabase configuration prompted securely during initial setup.
+Deployment instructions document the required public variables and Supabase Auth redirect configuration.
+
+### 2026-09-19 - Mathew Joseph - pending
+Added persisted screening history with per-session details and refreshes after local saves or signed-in synchronization.
+Parent access policies now allow consent and screening uploads; the mobile and dashboard clients retain the shared role contract.
+Dashboard lint passed; Flutter validation could not run because this environment has no `flutter` or `dart` executable.
 
 ### 2026-09-19 - Mathew Joseph
 Added a settings account section showing the signed-in user's display name, email, and shared Supabase role.

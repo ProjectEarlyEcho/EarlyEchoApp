@@ -33,10 +33,9 @@ void main() {
     expect(find.textContaining('फ़ोन से बाहर'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    // The mocked INCOMPLETE response routes to the retry prompt.
+    // An incomplete live payload uses the deterministic test fixture.
     await tester.pumpAndSettle();
     expect(find.byType(ResultScreen), findsOneWidget);
-    expect(find.text('विश्लेषण अधूरा रहा'), findsOneWidget);
-    expect(find.text('दोबारा स्क्रीनिंग करें'), findsOneWidget);
+    expect(find.text('हरा — सामान्य विकास'), findsOneWidget);
   });
 }

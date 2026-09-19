@@ -86,7 +86,9 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
         await repository.attachConsentLogToSession(consentLogId, model.id);
       }
       await ref.read(syncProvider.notifier).syncNow();
-    } catch (_) {
+      ref.invalidate(savedSessionsProvider);
+    } catch (error) {
+      debugPrint('Could not persist screening result: $error');
       // A persistence failure must never blank the result screen; the
       // session stays queued and the next launch re-attempts the write.
     }
