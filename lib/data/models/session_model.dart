@@ -5,7 +5,8 @@ import 'biomarker_result.dart';
 /// A completed screening session, persisted to SQLite locally and synced
 /// to Supabase when connectivity is available.
 ///
-/// Only numeric biomarker values are stored — never audio.
+/// Only numeric acoustic values and explainable quality metadata are stored —
+/// never audio or raw video.
 class SessionModel {
   const SessionModel({
     required this.id,

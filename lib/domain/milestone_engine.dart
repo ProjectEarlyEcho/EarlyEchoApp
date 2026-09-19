@@ -129,10 +129,9 @@ class MilestoneSummary {
 
 /// Scores the optional CDC milestone questionnaire.
 ///
-/// The questionnaire is a *context-only* signal: its [MilestoneSummary] is
-/// stored alongside the session to help the worker and clinician interpret
-/// the screening, but it never overrides, gates, or alters the acoustic
-/// biomarker result produced by `ScoringEngine`.
+/// The questionnaire is an explainable clinician-review signal. In the
+/// combined assessment it can elevate a GREEN acoustic result to YELLOW; it
+/// never adds an acoustic biomarker flag or creates an automatic DEIC referral.
 class MilestoneEngine {
   MilestoneEngine._();
 

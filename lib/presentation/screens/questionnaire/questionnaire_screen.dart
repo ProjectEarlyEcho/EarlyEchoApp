@@ -36,9 +36,8 @@ final milestoneQuestionsLoaderProvider =
 ///
 /// Questions are loaded from `assets/data/milestones_hi.json` and filtered
 /// to the enrolled child's age window. Each is answered हाँ/नहीं and the
-/// tally is scored by [MilestoneEngine]. The result is context-only — it
-/// is stored on the session but never gates navigation; the worker may
-/// also skip the whole step.
+/// tally is scored by [MilestoneEngine]. A warning can request clinician
+/// review in the combined assessment; the worker may also skip the whole step.
 class QuestionnaireScreen extends ConsumerStatefulWidget {
   const QuestionnaireScreen({super.key});
 

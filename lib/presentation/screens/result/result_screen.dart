@@ -8,20 +8,22 @@ import '../../../core/theme.dart';
 import '../../../data/models/biomarker_result.dart';
 import '../../../data/models/session_features.dart';
 import '../../../data/models/session_model.dart';
+import '../../../domain/combined_scoring_engine.dart';
+import '../../../domain/milestone_engine.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/sync_provider.dart';
 import '../../widgets/app_ui.dart';
 import 'biomarker_chip.dart';
 
-/// Step 6 of the screening flow — the scored RED/YELLOW/GREEN result.
+/// Step 6 of the screening flow — the explainable RED/YELLOW/GREEN result.
 ///
-/// Reads the analysed [BiomarkerResult] + feature vector off
-/// [sessionProvider], shows the risk banner, Hindi explanation and the
-/// per-biomarker flags. A COMPLETE result is persisted to SQLite once and
-/// queued for cloud sync; the consent audit row is linked to the new
-/// session id. An INCOMPLETE analysis shows quality reasons and a retry
-/// path — never a definitive result.
+/// Reads the combined audio, questionnaire, and video-quality assessment from
+/// [sessionProvider], shows the risk banner, next step, and acoustic
+/// biomarker flags. A COMPLETE result is persisted to SQLite once and queued
+/// for cloud sync; the consent audit row is linked to the new session id. An
+/// INCOMPLETE audio analysis shows quality reasons and a retry path — never a
+/// definitive result.
 class ResultScreen extends ConsumerStatefulWidget {
   const ResultScreen({super.key});
 
@@ -41,7 +43,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
   Future<void> _persistIfComplete() async {
     if (_persisted) return;
     final session = ref.read(sessionProvider);
-    final result = session.biomarkerResult;
+    final result = session.combinedResult;
     final features = session.features;
     final profile = session.childProfile;
     if (result == null || features == null || profile == null) return;
@@ -61,9 +63,9 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       vttlMs: features.vttlMs,
       pfvStd: features.pfvStd,
       cvrRatio: features.cvrRatio,
-      vttlFlagged: result.vttlFlagged,
-      pfvFlagged: result.pfvFlagged,
-      cvrFlagged: result.cvrFlagged,
+      vttlFlagged: result.audioResult.vttlFlagged,
+      pfvFlagged: result.audioResult.pfvFlagged,
+      cvrFlagged: result.audioResult.cvrFlagged,
       audioSourceUsed: raw['audio_source_used']?.toString() ?? 'UNKNOWN',
       stateCode: profile.stateCode,
       districtCode: profile.districtCode,
@@ -71,6 +73,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
         'steps': raw['decision_trace'] ?? const [],
         'frames_processed': raw['frames_processed'] ?? 0,
         'transition_count': raw['transition_count'] ?? 0,
+        'video_quality': raw['video_quality'] ?? const <String, dynamic>{},
+        'combined_assessment': result.toDecisionTrace(),
       },
     );
 
@@ -104,7 +108,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
   Widget build(BuildContext context) {
     final l10n = ref.watch(appLocaleProvider);
     final session = ref.watch(sessionProvider);
-    final result = session.biomarkerResult;
+    final result = session.combinedResult;
     final features = session.features;
 
     return Scaffold(
@@ -262,7 +266,7 @@ class _ScoredResult extends StatelessWidget {
     required this.l10n,
   });
 
-  final BiomarkerResult result;
+  final CombinedScreeningResult result;
   final SessionFeatures features;
   final VoidCallback onReferral;
   final Locale? l10n;
@@ -297,7 +301,9 @@ class _ScoredResult extends StatelessWidget {
           color: color,
           icon: icon,
           title: AppStrings.tr(titleKey, l10n),
-          subtitle: AppStrings.tr(explKey, l10n),
+          subtitle: result.questionnaireEscalated
+              ? AppStrings.tr('result_yellow_questionnaire_expl', l10n)
+              : AppStrings.tr(explKey, l10n),
         ),
         const SizedBox(height: 16),
         Row(
@@ -306,7 +312,7 @@ class _ScoredResult extends StatelessWidget {
               child: BiomarkerChip(
                 name: 'VTTL',
                 value: '${features.vttlMs.toStringAsFixed(0)} ms',
-                flagged: result.vttlFlagged,
+                flagged: result.audioResult.vttlFlagged,
               ),
             ),
             const SizedBox(width: 8),
@@ -314,7 +320,7 @@ class _ScoredResult extends StatelessWidget {
               child: BiomarkerChip(
                 name: 'CVR',
                 value: features.cvrRatio.toStringAsFixed(3),
-                flagged: result.cvrFlagged,
+                flagged: result.audioResult.cvrFlagged,
               ),
             ),
             const SizedBox(width: 8),
@@ -322,11 +328,13 @@ class _ScoredResult extends StatelessWidget {
               child: BiomarkerChip(
                 name: 'PFV',
                 value: '${features.pfvStd.toStringAsFixed(1)} ST',
-                flagged: result.pfvFlagged,
+                flagged: result.audioResult.pfvFlagged,
               ),
             ),
           ],
         ),
+        const SizedBox(height: 16),
+        _CombinedAssessmentCard(result: result, l10n: l10n),
         const SizedBox(height: 16),
         if (result.riskLevel == RiskLevel.red)
           FilledButton.icon(
@@ -334,6 +342,152 @@ class _ScoredResult extends StatelessWidget {
             icon: const Icon(Icons.description_outlined),
             label: Text(AppStrings.tr('result_referral', l10n)),
           ),
+      ],
+    );
+  }
+}
+
+class _CombinedAssessmentCard extends StatelessWidget {
+  const _CombinedAssessmentCard({required this.result, required this.l10n});
+
+  final CombinedScreeningResult result;
+  final Locale? l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final questionnaire = result.milestoneSummary;
+    final audioSummary = result.audioResult.flagCount == 0
+        ? AppStrings.tr('result_audio_clear', l10n)
+        : AppStrings.trf('result_audio_flags', l10n, {
+            'count': '${result.audioResult.flagCount}',
+          });
+    final questionnaireSummary = result.questionnaireSkipped
+        ? AppStrings.tr('result_questionnaire_skipped', l10n)
+        : questionnaire == null
+        ? AppStrings.tr('result_questionnaire_not_completed', l10n)
+        : questionnaire.status == MilestoneStatus.warning
+        ? AppStrings.trf('result_questionnaire_warning', l10n, {
+            'count': '${questionnaire.concernCount}',
+          })
+        : AppStrings.tr('result_questionnaire_clear', l10n);
+    final (videoIcon, videoSummary) = switch (result.videoQuality.status) {
+      VideoQualityStatus.available => (
+        Icons.videocam_rounded,
+        AppStrings.tr('result_video_available', l10n),
+      ),
+      VideoQualityStatus.limited => (
+        Icons.videocam_off_rounded,
+        AppStrings.tr('result_video_limited', l10n),
+      ),
+      VideoQualityStatus.unavailable => (
+        Icons.videocam_off_outlined,
+        AppStrings.tr('result_video_unavailable', l10n),
+      ),
+    };
+    final recommendation = switch (result.recommendation) {
+      AssessmentRecommendation.routineFollowUp => AppStrings.tr(
+        'result_action_routine',
+        l10n,
+      ),
+      AssessmentRecommendation.rescreen => AppStrings.tr(
+        'result_action_rescreen',
+        l10n,
+      ),
+      AssessmentRecommendation.clinicianReview => AppStrings.tr(
+        'result_action_clinician_review',
+        l10n,
+      ),
+      AssessmentRecommendation.deicReferral => AppStrings.tr(
+        'result_action_referral',
+        l10n,
+      ),
+    };
+
+    return AppSurface(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppStrings.tr('result_combined_title', l10n),
+            style: Theme.of(context).textTheme.titleSmall,
+          ),
+          const SizedBox(height: 10),
+          _AssessmentSignalRow(
+            icon: Icons.graphic_eq_rounded,
+            label: AppStrings.tr('result_audio_label', l10n),
+            value: audioSummary,
+          ),
+          const SizedBox(height: 8),
+          _AssessmentSignalRow(
+            icon: Icons.fact_check_outlined,
+            label: AppStrings.tr('result_questionnaire_label', l10n),
+            value: questionnaireSummary,
+          ),
+          const SizedBox(height: 8),
+          _AssessmentSignalRow(
+            icon: videoIcon,
+            label: AppStrings.tr('result_video_label', l10n),
+            value: videoSummary,
+          ),
+          const Divider(height: 24),
+          _AssessmentSignalRow(
+            icon: Icons.health_and_safety_outlined,
+            label: AppStrings.tr('result_next_step_label', l10n),
+            value: recommendation,
+          ),
+          const SizedBox(height: 10),
+          Text(
+            AppStrings.tr('result_combined_note', l10n),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AssessmentSignalRow extends StatelessWidget {
+  const _AssessmentSignalRow({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: scheme.primary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Semantics(
+            label: '$label: $value',
+            child: ExcludeSemantics(
+              child: Text.rich(
+                TextSpan(
+                  text: '$label: ',
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+                  children: [
+                    TextSpan(
+                      text: value,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.w400,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

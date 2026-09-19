@@ -34,7 +34,19 @@ class HomeScreen extends ConsumerWidget {
     });
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EarlyEcho'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/branding/earlyecho_mark.png',
+              width: 34,
+              height: 34,
+              excludeFromSemantics: true,
+            ),
+            const SizedBox(width: 8),
+            const Text('EarlyEcho'),
+          ],
+        ),
         actions: [
           if (auth.configured)
             IconButton(

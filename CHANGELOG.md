@@ -4,6 +4,30 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-09-19 - Devadathan M R - pending
+Added an explainable combined assessment that brings questionnaire concerns and local video capture quality into the screening result.
+Questionnaire concerns can request clinician review, while the audio-only DEIC referral rule and video privacy safeguards remain intact.
+
+### 2026-09-19 - Devadathan M R - pending
+Removed the duplicated large wordmark from the home-screen hero while retaining the compact app-bar mark and Android launcher icon.
+The hero returns to its neutral hearing cue, keeping the call to action focused without repeating the product identity.
+
+### 2026-09-19 - Devadathan M R - pending
+Applied the supplied EarlyEcho logo across the mobile home screen, Android launcher, splash screen, and app label.
+The complete wordmark and a compact mark preserve the original artwork while staying legible in their respective spaces.
+
+### 2026-09-19 - Devadathan M R - pending
+Disabled Kotlin's shared incremental compiler cache and serialised Gradle workers for this Windows Android build.
+This prevents cache-registration collisions between third-party plug-ins, so ordinary Flutter debug APK builds complete reliably.
+
+### 2026-09-19 - Devadathan M R - pending
+Replaced the camera preview's stale SurfaceTexture bridge with Flutter's renderer-managed SurfaceProducer.
+The preview now rebinds when Android recreates its drawing surface, preventing the live camera area from remaining black while analysis is active.
+
+### 2026-09-19 - Devadathan M R - pending
+Added a parallel, on-device video-quality stream to guided elicitation with a live camera preview and CameraX/ML Kit processing.
+It retains only aggregate framing and movement context in the session trace; raw video and landmarks are discarded, while audio capture and scoring remain unchanged.
+The Android CI check now compiles the native integration, and the Flutter dependency range supports the current stable SDK.
 ### 2026-09-19 - Mathew Joseph - pending
 Added a Render Blueprint for the dashboard's Node service with its Supabase configuration prompted securely during initial setup.
 Deployment instructions document the required public variables and Supabase Auth redirect configuration.

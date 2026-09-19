@@ -50,6 +50,7 @@ final completeRedPipelineResponse = <String, dynamic>{
 /// screen mid-analysis in route tests.
 void installMockPipelineChannel({Map<String, dynamic>? runPipelineResponse}) {
   const channel = MethodChannel(EarlyEchoConstants.audioPipelineChannel);
+  const videoChannel = MethodChannel(EarlyEchoConstants.videoPipelineChannel);
   final messenger =
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
   messenger.setMockMethodCallHandler(channel, (call) {
@@ -60,5 +61,20 @@ void installMockPipelineChannel({Map<String, dynamic>? runPipelineResponse}) {
     }
     return Future.value(true);
   });
-  addTearDown(() => messenger.setMockMethodCallHandler(channel, null));
+  messenger.setMockMethodCallHandler(videoChannel, (call) {
+    if (call.method == 'initializePreview') {
+      throw PlatformException(code: 'ERR_UNAVAILABLE');
+    }
+    if (call.method == 'stopAnalysis') {
+      return Future.value(<String, dynamic>{
+        'analysis_status': 'UNAVAILABLE',
+        'raw_video_retained': false,
+      });
+    }
+    return Future.value(true);
+  });
+  addTearDown(() {
+    messenger.setMockMethodCallHandler(channel, null);
+    messenger.setMockMethodCallHandler(videoChannel, null);
+  });
 }

@@ -4,6 +4,7 @@ import '../../data/models/biomarker_result.dart';
 import '../../data/models/child_profile.dart';
 import '../../data/models/session_features.dart';
 import '../../data/repositories/care_repository.dart';
+import '../../domain/combined_scoring_engine.dart';
 import '../../domain/milestone_engine.dart';
 
 /// In-progress screening session, shared across the flow screens.
@@ -24,6 +25,7 @@ class SessionState {
     this.protocolTimings = const [],
     this.features,
     this.biomarkerResult,
+    this.combinedResult,
     this.pipelineResponse = const {},
   });
 
@@ -34,7 +36,8 @@ class SessionState {
   /// Question id -> हाँ (true) / नहीं (false) from the milestone screen.
   final Map<String, bool> milestoneAnswers;
 
-  /// Context-only questionnaire result; never gates the acoustic outcome.
+  /// Questionnaire summary used as an explainable clinician-review signal in
+  /// the combined assessment. It never creates an automatic DEIC referral.
   final MilestoneSummary? milestoneSummary;
 
   /// Worker chose to skip the optional questionnaire.
@@ -61,6 +64,11 @@ class SessionState {
   /// that must be retried rather than screened.
   final BiomarkerResult? biomarkerResult;
 
+  /// Explainable assessment that combines audio, questionnaire, and video
+  /// capture quality. The audio result remains available for its three
+  /// biomarker measurements.
+  final CombinedScreeningResult? combinedResult;
+
   /// Raw channel payload kept for `audio_source_used` and `decision_trace`
   /// when the session is persisted.
   final Map<String, dynamic> pipelineResponse;
@@ -76,6 +84,7 @@ class SessionState {
     List<Map<String, Object>>? protocolTimings,
     SessionFeatures? features,
     BiomarkerResult? biomarkerResult,
+    CombinedScreeningResult? combinedResult,
     Map<String, dynamic>? pipelineResponse,
   }) {
     return SessionState(
@@ -89,6 +98,7 @@ class SessionState {
       protocolTimings: protocolTimings ?? this.protocolTimings,
       features: features ?? this.features,
       biomarkerResult: biomarkerResult ?? this.biomarkerResult,
+      combinedResult: combinedResult ?? this.combinedResult,
       pipelineResponse: pipelineResponse ?? this.pipelineResponse,
     );
   }
@@ -149,10 +159,20 @@ class SessionNotifier extends StateNotifier<SessionState> {
     required SessionFeatures features,
     required BiomarkerResult result,
     required Map<String, dynamic> rawResponse,
+    CombinedScreeningResult? combinedResult,
   }) {
+    final combined =
+        combinedResult ??
+        CombinedScoringEngine.score(
+          audioResult: result,
+          milestoneSummary: state.milestoneSummary,
+          questionnaireSkipped: state.questionnaireSkipped,
+          videoQuality: rawResponse['video_quality'],
+        );
     state = state.copyWith(
       features: features,
       biomarkerResult: result,
+      combinedResult: combined,
       pipelineResponse: rawResponse,
     );
   }

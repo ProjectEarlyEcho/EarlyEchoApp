@@ -9,9 +9,11 @@ import '../../../core/constants.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../../services/audio_pipeline_service.dart';
 import '../../../services/elicitation_audio_service.dart';
+import '../../../services/video_pipeline_service.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
+import '../../widgets/video_capture_preview.dart';
 import 'elicitation_controller.dart';
 import 'protocol_card.dart';
 
@@ -37,6 +39,8 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
 
   ElicitationAudioPlayer? _audio;
   bool _captureStarted = false;
+  bool _videoCaptureStarted = false;
+  bool _videoCaptureStarting = false;
 
   /// Lazily resolved so the field can also be stopped from [dispose]
   /// without reading providers during teardown.
@@ -60,10 +64,10 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
   /// instruction. Playback is best-effort — the on-screen instruction is
   /// the fallback when audio is unavailable.
   ///
-  /// The first protocol also opens microphone capture through the native
-  /// pipeline; permission denial or capture failure never blocks the
-  /// guided sequence — an empty capture simply yields an INCOMPLETE
-  /// analysis with a retry prompt downstream.
+  /// The first protocol also opens the independent microphone and camera
+  /// pipelines. Either optional capture can fail without blocking the guided
+  /// sequence; video supplies framing quality to the combined assessment,
+  /// never an audio or behavioural risk score.
   Future<void> _startProtocol() async {
     final state = ref.read(elicitationControllerProvider);
     if (state.running || state.completed) return;
@@ -90,6 +94,11 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
         }
       }
     }
+    if (!_videoCaptureStarted && !_videoCaptureStarting) {
+      // Keep the established audio start path responsive while the separate
+      // optional camera permission dialog and preview are being prepared.
+      unawaited(_startVideoCapture());
+    }
     ref.read(elicitationControllerProvider.notifier).start();
     try {
       await _player.playFor(state.current.key);
@@ -100,6 +109,47 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
 
   void _skipProtocol() {
     ref.read(elicitationControllerProvider.notifier).skip();
+  }
+
+  Future<void> _startVideoCapture() async {
+    _videoCaptureStarting = true;
+    try {
+      await VideoPipelineService.requestPermission();
+      await VideoPipelineService.startAnalysis();
+      if (mounted) {
+        setState(() => _videoCaptureStarted = true);
+      } else {
+        _videoCaptureStarted = true;
+      }
+    } on VideoPipelineException {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              AppStrings.tr(
+                'el_video_unavailable',
+                ref.read(appLocaleProvider),
+              ),
+            ),
+          ),
+        );
+      }
+    } finally {
+      _videoCaptureStarting = false;
+    }
+  }
+
+  Future<void> _releaseVideoCapture() async {
+    try {
+      await VideoPipelineService.stopAnalysis();
+    } on VideoPipelineException {
+      // The video path is optional and may already have stopped on pause.
+    }
+    try {
+      await VideoPipelineService.disposePreview();
+    } on VideoPipelineException {
+      // There is nothing to release when native video was unavailable.
+    }
   }
 
   Future<void> _replayInstruction() async {
@@ -115,6 +165,7 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
   void dispose() {
     _tickTimer?.cancel();
     unawaited(_audio?.stop());
+    unawaited(_releaseVideoCapture());
     super.dispose();
   }
 
@@ -205,6 +256,22 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
                 ),
               ),
               const SizedBox(height: 14),
+              SizedBox(
+                height: 132,
+                child: VideoCapturePreview(
+                  active: _videoCaptureStarted,
+                  locale: l10n,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                AppStrings.tr('el_video_note', l10n),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 10),
               _WaveformBars(
                 active: state.running,
                 seed: state.overallElapsedSeconds,

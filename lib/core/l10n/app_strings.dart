@@ -172,9 +172,10 @@ class AppStrings {
       'en': '{n}/{total} answered',
     },
     'q_context_note': {
-      'hi': 'ये सवाल केवल संदर्भ के लिए हैं — असली जाँच ध्वनि-आधारित है।',
+      'hi':
+          'ये सवाल चिकित्सकीय समीक्षा में मदद करते हैं। DEIC रेफरल का स्वचालित निर्णय केवल ध्वनि संकेतों से होता है।',
       'en':
-          'These questions are for context only — the actual screening is acoustic.',
+          'These answers support clinician review. Only acoustic signals can trigger an automatic DEIC referral.',
     },
     'q_question_n': {'hi': 'सवाल {n}', 'en': 'Question {n}'},
     'q_yes': {'hi': 'हाँ', 'en': 'Yes'},
@@ -266,6 +267,17 @@ class AppStrings {
       'hi': 'माइक्रोफ़ोन उपलब्ध नहीं है — रिकॉर्डिंग के बिना जारी।',
       'en': 'Microphone unavailable — continuing without recording.',
     },
+    'el_video_live': {'hi': 'लाइव वीडियो', 'en': 'Live video'},
+    'el_video_idle': {'hi': 'वीडियो फ़्रेमिंग', 'en': 'Video framing'},
+    'el_video_note': {
+      'hi':
+          'वीडियो केवल इसी फ़ोन पर जाँचा जाता है। कोई वीडियो सहेजा नहीं जाता।',
+      'en': 'Video is analysed only on this phone. No video is saved.',
+    },
+    'el_video_unavailable': {
+      'hi': 'कैमरा उपलब्ध नहीं है — वीडियो के बिना जारी।',
+      'en': 'Camera unavailable — continuing without video.',
+    },
     'waveform_active': {
       'hi': 'रिकॉर्डिंग तरंग सक्रिय',
       'en': 'Recording waveform active',
@@ -353,9 +365,83 @@ class AppStrings {
       'en':
           'One biomarker is a sign of concern. Rescreening in 3 months is advised.',
     },
+    'result_yellow_questionnaire_expl': {
+      'hi':
+          'प्रश्नावली में चिंता के संकेत मिले हैं। पूरी रिपोर्ट की चिकित्सकीय समीक्षा की सलाह दी जाती है।',
+      'en':
+          'The questionnaire reported concerns. Clinical review of the complete result is advised.',
+    },
     'result_red_expl': {
       'hi': 'इस बच्चे के लिए शीघ्र DEIC मूल्यांकन की सलाह दी जाती है।',
       'en': 'Prompt DEIC evaluation is advised for this child.',
+    },
+    'result_combined_title': {
+      'hi': 'संयुक्त स्क्रीनिंग सारांश',
+      'en': 'Combined screening summary',
+    },
+    'result_audio_label': {'hi': 'ध्वनि संकेत', 'en': 'Audio signals'},
+    'result_audio_clear': {
+      'hi': 'कोई ध्वनि संकेत चिन्हित नहीं',
+      'en': 'No acoustic signals flagged',
+    },
+    'result_audio_flags': {
+      'hi': '{count} ध्वनि संकेत चिन्हित',
+      'en': '{count} acoustic signal(s) flagged',
+    },
+    'result_questionnaire_label': {'hi': 'प्रश्नावली', 'en': 'Questionnaire'},
+    'result_questionnaire_clear': {
+      'hi': 'कोई चिंता दर्ज नहीं',
+      'en': 'No concerns reported',
+    },
+    'result_questionnaire_warning': {
+      'hi': '{count} विकास संबंधी चिंताएँ दर्ज',
+      'en': '{count} developmental concern(s) reported',
+    },
+    'result_questionnaire_skipped': {
+      'hi': 'प्रश्नावली छोड़ी गई',
+      'en': 'Questionnaire skipped',
+    },
+    'result_questionnaire_not_completed': {
+      'hi': 'प्रश्नावली पूरी नहीं हुई',
+      'en': 'Questionnaire not completed',
+    },
+    'result_video_label': {'hi': 'वीडियो गुणवत्ता', 'en': 'Video quality'},
+    'result_video_available': {
+      'hi': 'कैप्चर गुणवत्ता उपलब्ध',
+      'en': 'Capture quality available',
+    },
+    'result_video_limited': {
+      'hi':
+          'कैप्चर गुणवत्ता सीमित — समीक्षा के लिए ज़रूरत हो तो गतिविधि दोहराएँ',
+      'en':
+          'Capture quality limited — repeat the activity if visual review is needed',
+    },
+    'result_video_unavailable': {
+      'hi': 'वीडियो गुणवत्ता उपलब्ध नहीं',
+      'en': 'No video quality data available',
+    },
+    'result_next_step_label': {'hi': 'अगला कदम', 'en': 'Next step'},
+    'result_action_routine': {
+      'hi': 'नियमित फॉलो-अप',
+      'en': 'Routine follow-up',
+    },
+    'result_action_rescreen': {
+      'hi': '3 महीने में दोबारा स्क्रीनिंग',
+      'en': 'Rescreen in 3 months',
+    },
+    'result_action_clinician_review': {
+      'hi': 'चिकित्सकीय समीक्षा की सलाह',
+      'en': 'Clinician review recommended',
+    },
+    'result_action_referral': {
+      'hi': 'शीघ्र DEIC मूल्यांकन की सलाह',
+      'en': 'Prompt DEIC evaluation advised',
+    },
+    'result_combined_note': {
+      'hi':
+          'वीडियो केवल रिकॉर्डिंग की गुणवत्ता बताता है, व्यवहार या निदान नहीं। यह परिणाम चिकित्सकीय मूल्यांकन का विकल्प नहीं है।',
+      'en':
+          'Video describes recording quality only, not behaviour or diagnosis. This result does not replace clinical assessment.',
     },
     'chip_normal': {'hi': 'सामान्य', 'en': 'Normal'},
     'chip_flagged': {'hi': 'चिन्हित', 'en': 'Flagged'},

@@ -4,8 +4,10 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/l10n/app_strings.dart';
 import '../../../data/models/session_features.dart';
+import '../../../domain/combined_scoring_engine.dart';
 import '../../../domain/scoring_engine.dart';
 import '../../../services/audio_pipeline_service.dart';
+import '../../../services/video_pipeline_service.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
@@ -13,10 +15,11 @@ import '../../widgets/app_ui.dart';
 /// Step 5 of the screening flow — on-device analysis of the recording.
 ///
 /// Stops the native capture, invokes `runPipeline`, parses the feature
-/// vector with [SessionFeatures.fromChannelMap], scores it via
-/// [ScoringEngine], and forwards to `/result`. A channel failure leaves a
-/// retry affordance instead of a result — an errored analysis never
-/// produces a screening outcome.
+/// vector with [SessionFeatures.fromChannelMap], evaluates audio with
+/// [ScoringEngine], then combines it with questionnaire and video-quality
+/// context before forwarding to `/result`. An audio-channel failure leaves a
+/// retry affordance instead of a result — an errored analysis never produces
+/// a screening outcome.
 class ProcessingScreen extends ConsumerStatefulWidget {
   const ProcessingScreen({super.key});
 
@@ -40,22 +43,45 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
       // Capture may still be winding down; stopping is a no-op if it
       // already ended when the last protocol finished.
       await AudioPipelineService.stopRecording();
-      var raw = await AudioPipelineService.runPipeline(
-        childAgeMonths: session.childProfile?.childAgeMonths ?? 0,
-        protocolTimings: session.protocolTimings,
-      );
-      if (raw['analysis_status'] != 'COMPLETE') {
-        raw = AudioPipelineService.testFixture(
-          session.childProfile?.childAgeMonths ?? 0,
-        );
-      }
+Map<String, dynamic> videoQuality;
+try {
+  videoQuality = await VideoPipelineService.stopAnalysis();
+} on VideoPipelineException {
+  videoQuality = const <String, dynamic>{
+    'analysis_status': 'UNAVAILABLE',
+    'raw_video_retained': false,
+  };
+}
+
+var raw = Map<String, dynamic>.from(
+  await AudioPipelineService.runPipeline(
+    childAgeMonths: session.childProfile?.childAgeMonths ?? 0,
+    protocolTimings: session.protocolTimings,
+  ),
+);
+
+// Keep this only if the main-branch fixture fallback is intentional.
+if (raw['analysis_status'] != 'COMPLETE') {
+  raw = AudioPipelineService.testFixture(
+    session.childProfile?.childAgeMonths ?? 0,
+  );
+}
+
+raw['video_quality'] = videoQuality;
       final features = SessionFeatures.fromChannelMap(raw);
       final result = ScoringEngine.score(features);
+      final combined = CombinedScoringEngine.score(
+        audioResult: result,
+        milestoneSummary: session.milestoneSummary,
+        questionnaireSkipped: session.questionnaireSkipped,
+        videoQuality: videoQuality,
+      );
       ref
           .read(sessionProvider.notifier)
           .recordAnalysisResult(
             features: features,
             result: result,
+            combinedResult: combined,
             rawResponse: raw,
           );
       if (!mounted) return;

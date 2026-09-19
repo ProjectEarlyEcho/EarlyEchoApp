@@ -61,6 +61,9 @@ jobs:
       - name: Run tests
         run: flutter test
 
+      - name: Compile Android integration
+        run: flutter build apk --debug
+
   build-apk:
     needs: analyze-and-test
     if: github.event_name != 'pull_request'
