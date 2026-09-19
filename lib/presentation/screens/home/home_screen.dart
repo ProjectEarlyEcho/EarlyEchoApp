@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/locale_provider.dart';
+import '../../providers/sync_provider.dart';
 import '../../widgets/app_ui.dart';
 
 /// The worker's landing screen — entry point into the screening flow.
@@ -20,6 +23,15 @@ class HomeScreen extends ConsumerWidget {
     final l10n = ref.watch(appLocaleProvider);
     final auth = ref.watch(appAuthProvider);
     final scheme = Theme.of(context).colorScheme;
+    ref.listen<AppAuthState>(appAuthProvider, (previous, next) {
+      if (next.signedIn && !(previous?.signedIn ?? false)) {
+        unawaited(
+          ref.read(syncProvider.notifier).syncNow().then((_) {
+            ref.invalidate(savedSessionsProvider);
+          }),
+        );
+      }
+    });
     return Scaffold(
       appBar: AppBar(
         title: const Text('EarlyEcho'),

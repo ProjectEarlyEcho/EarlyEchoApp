@@ -176,6 +176,23 @@ class MainActivity : FlutterActivity() {
                 }
                 buffered = 0
             }
+
+            // A mid-activity skip can stop capture before the rolling window
+            // fills. Pad the tail with silence and retain its real duration so
+            // already-recorded speech still contributes to the session.
+            if (buffered > 0 && modelError == null) {
+                try {
+                    ensureModel()
+                    val padded = chunk.copyOf()
+                    val actualMs = buffered * 1000L / 16_000L
+                    RollingBufferProcessor(vad, diarizer, extractor, windowSamples)
+                        .processChunk(padded, aggregate.ageMonths)
+                        .copy(recordedMs = actualMs)
+                        .also { aggregate.add(it) }
+                } catch (e: Exception) {
+                    modelError = e.message ?: "Audio analysis failed"
+                }
+            }
         }
         result.success(true)
     }

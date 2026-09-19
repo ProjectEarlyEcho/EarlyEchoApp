@@ -28,6 +28,7 @@ class SupabaseScreeningUploader
   final SupabaseClient _client;
 
   static const String table = 'screening_sessions';
+  static const String compatibilityTable = 'screenings';
   static const String consentTable = 'consent_logs';
 
   @override
@@ -42,8 +43,12 @@ class SupabaseScreeningUploader
         .eq('id', user.id)
         .maybeSingle();
     final role = profile?['role'] as String?;
+    if (role == 'parent' || session.cloudChildId == null) {
+      await _client.from(compatibilityTable).upsert(session.toJson());
+      return;
+    }
     if (role != 'clinician' && role != 'admin') {
-      throw StateError('Only care workers can sync screening records.');
+      throw StateError('This account does not have screening sync access.');
     }
     await _client.from(table).insert(session.toDashboardJson());
   }
@@ -52,7 +57,7 @@ class SupabaseScreeningUploader
   Future<void> uploadConsentLog(ConsentLog log) async {
     final user = _client.auth.currentUser;
     if (user == null) {
-      throw StateError('Sign in as a care worker before syncing consent logs.');
+      throw StateError('Sign in before syncing consent logs.');
     }
     await _client.from(consentTable).upsert(log.toJson());
   }
