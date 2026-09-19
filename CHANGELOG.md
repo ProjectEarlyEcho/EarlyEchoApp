@@ -5,6 +5,11 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Mathew Hans
+Stabilized Gemini Live playback through an ESP32-S3 WebSocket speaker with paced PCM sample-boundary preservation, explicit end-of-turn draining, a larger jitter cushion, and retry-safe stereo I2S writes.
+Added demo-mode microphone suppression to prevent the external speaker from retriggering Gemini, plus firmware diagnostics for dropped data, underruns, flushes, and short writes; Wi-Fi credentials remain in an ignored local header.
+Focused Dart analysis and standalone PCM boundary/pacing checks pass, and playback was validated on-device; the focused Flutter test runner could not start concurrently with the active phone demo holding Flutter's SDK lock.
+
+### 2026-09-19 - Mathew Hans
 Replaced phone/A2DP model-audio playback with a paced ESP32-S3 WebSocket transport that sends 24 kHz PCM in 40 ms binary chunks with a 300 ms lead buffer.
 Gemini reception and ESP32 transmission now run independently; barge-in clears queued audio and sends the speaker a `flush` command, while the ESP endpoint is configurable through `ESP32_AUDIO_WS_URL`.
 

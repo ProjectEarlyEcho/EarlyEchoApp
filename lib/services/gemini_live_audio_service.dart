@@ -38,6 +38,7 @@ class GeminiLiveAudioService extends ChangeNotifier {
           endpoint: esp32Endpoint,
           onError: _handleEsp32Error,
           onDisconnected: _handleEsp32Disconnected,
+          onPlaybackDrained: _handleEsp32PlaybackDrained,
         );
   }
 
@@ -53,6 +54,10 @@ class GeminiLiveAudioService extends ChangeNotifier {
   StreamSubscription<dynamic>? _geminiSubscription;
   StreamSubscription<Uint8List>? _microphoneSubscription;
   bool _disposed = false;
+  bool _outputFormatLogged = false;
+  bool _microphoneUplinkMuted = false;
+  Timer? _microphoneResumeTimer;
+  DateTime? _microphoneMutedUntil;
 
   bool isConnecting = false;
   bool isRunning = false;
@@ -173,7 +178,7 @@ class GeminiLiveAudioService extends ChangeNotifier {
 
   void _sendMicrophoneChunk(Uint8List bytes) {
     final socket = _geminiSocket;
-    if (socket == null) return;
+    if (socket == null || _microphoneUplinkMuted) return;
     socket.add(
       jsonEncode({
         'realtimeInput': {
@@ -211,6 +216,7 @@ class GeminiLiveAudioService extends ChangeNotifier {
     final serverContent = payload['serverContent'] as Map<String, dynamic>?;
     if (serverContent?['interrupted'] == true) {
       unawaited(_esp32Audio.flush());
+      _keepMicrophoneMutedFor(const Duration(seconds: 5));
       statusMessage = 'Interrupted — flushing ESP32 audio…';
       notifyListeners();
     }
@@ -224,30 +230,87 @@ class GeminiLiveAudioService extends ChangeNotifier {
       statusMessage = 'Gemini heard: “$transcriptText”';
       notifyListeners();
     }
-    if (serverContent?['turnComplete'] == true ||
-        serverContent?['waitingForInput'] == true) {
-      statusMessage = 'Listening — responses stream to ${_esp32Endpoint.host}.';
+    final turnComplete = serverContent?['turnComplete'] == true;
+    if (turnComplete || serverContent?['waitingForInput'] == true) {
+      statusMessage = _microphoneUplinkMuted
+          ? 'Finishing response — microphone paused to prevent echo…'
+          : 'Listening — responses stream to ${_esp32Endpoint.host}.';
       notifyListeners();
     }
 
     final modelTurn = serverContent?['modelTurn'] as Map<String, dynamic>?;
     final modelParts = modelTurn?['parts'] as List<dynamic>?;
-    if (modelParts == null) return;
-    for (final part in modelParts) {
-      final inlineData =
-          (part as Map<String, dynamic>)['inlineData'] as Map<String, dynamic>?;
-      final encoded = inlineData?['data'] as String?;
-      if (encoded != null) _sendModelAudioToEsp32(base64Decode(encoded));
+    if (modelParts != null) {
+      for (final part in modelParts) {
+        final inlineData =
+            (part as Map<String, dynamic>)['inlineData']
+                as Map<String, dynamic>?;
+        final encoded = inlineData?['data'] as String?;
+        if (encoded == null) continue;
+        final mimeType = inlineData?['mimeType'] as String?;
+        if (!_isExpectedOutputFormat(mimeType)) {
+          _setStatus(
+            'Unsupported Gemini audio format: ${mimeType ?? 'not reported'}. '
+            'Expected 24 kHz PCM16 mono.',
+          );
+          continue;
+        }
+        if (!_outputFormatLogged) {
+          debugPrint(
+            'Gemini Live output: ${mimeType ?? 'audio/pcm;rate=24000'}; '
+            'streaming PCM16 mono little-endian to $_esp32Endpoint',
+          );
+          _outputFormatLogged = true;
+        }
+        _sendModelAudioToEsp32(base64Decode(encoded));
+      }
     }
+    if (turnComplete) _esp32Audio.finishTurn();
+  }
+
+  bool _isExpectedOutputFormat(String? mimeType) {
+    if (mimeType == null) return true;
+    final normalized = mimeType.toLowerCase().replaceAll(' ', '');
+    if (!normalized.startsWith('audio/pcm')) return false;
+    final rate = RegExp(r'rate=(\d+)').firstMatch(normalized)?.group(1);
+    return rate == null || rate == '24000';
   }
 
   void _sendModelAudioToEsp32(Uint8List bytes) {
     if (bytes.isEmpty) return;
+    _keepMicrophoneMutedFor(const Duration(seconds: 5));
     if (statusMessage != 'Gemini is responding through ESP32…') {
       statusMessage = 'Gemini is responding through ESP32…';
       notifyListeners();
     }
     _esp32Audio.enqueue(bytes);
+  }
+
+  void _handleEsp32PlaybackDrained() {
+    // Demo mode deliberately sacrifices barge-in so the phone cannot feed the
+    // external speaker back into Gemini as a new user utterance.
+    _keepMicrophoneMutedFor(const Duration(seconds: 5));
+  }
+
+  void _keepMicrophoneMutedFor(Duration duration) {
+    _microphoneUplinkMuted = true;
+    final requestedDeadline = DateTime.now().add(duration);
+    final currentDeadline = _microphoneMutedUntil;
+    if (currentDeadline == null || requestedDeadline.isAfter(currentDeadline)) {
+      _microphoneMutedUntil = requestedDeadline;
+    }
+    _microphoneResumeTimer?.cancel();
+    final remaining = _microphoneMutedUntil!.difference(DateTime.now());
+    _microphoneResumeTimer = Timer(remaining, () {
+      _microphoneUplinkMuted = false;
+      _microphoneMutedUntil = null;
+      _microphoneResumeTimer = null;
+      if (isRunning && !_disposed) {
+        statusMessage =
+            'Listening — responses stream to ${_esp32Endpoint.host}.';
+        notifyListeners();
+      }
+    });
   }
 
   void _handleGeminiClosed(Completer<void> setupComplete) {
@@ -304,6 +367,10 @@ class GeminiLiveAudioService extends ChangeNotifier {
   }
 
   Future<void> _stopInternal() async {
+    _microphoneResumeTimer?.cancel();
+    _microphoneResumeTimer = null;
+    _microphoneMutedUntil = null;
+    _microphoneUplinkMuted = false;
     await _microphoneSubscription?.cancel();
     _microphoneSubscription = null;
     if (await _recorder.isRecording()) await _recorder.stop();
@@ -312,6 +379,7 @@ class GeminiLiveAudioService extends ChangeNotifier {
     await _geminiSocket?.close();
     _geminiSocket = null;
     await _esp32Audio.close();
+    _outputFormatLogged = false;
     isRunning = false;
   }
 

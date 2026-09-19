@@ -91,6 +91,7 @@ Thumbs.db
 .env.*
 !.env.example
 tool/gemini_live.local.json
+hardware/esp32_s3_audio_server/arduino_secrets.h
 
 # ──────────────────────────────────────
 # Misc
