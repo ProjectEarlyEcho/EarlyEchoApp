@@ -245,6 +245,23 @@ class MainActivity : FlutterActivity() {
                 }
                 buffered = 0
             }
+
+            // A mid-activity skip can stop capture before the rolling window
+            // fills. Pad the tail with silence and retain its real duration so
+            // already-recorded speech still contributes to the session.
+            if (buffered > 0 && modelError == null) {
+                try {
+                    ensureModel()
+                    val padded = chunk.copyOf()
+                    val actualMs = buffered * 1000L / 16_000L
+                    RollingBufferProcessor(vad, diarizer, extractor, windowSamples)
+                        .processChunk(padded, aggregate.ageMonths)
+                        .copy(recordedMs = actualMs)
+                        .also { aggregate.add(it) }
+                } catch (e: Exception) {
+                    modelError = e.message ?: "Audio analysis failed"
+                }
+            }
         }
         result.success(true)
     }
@@ -390,9 +407,10 @@ class MainActivity : FlutterActivity() {
         }
 
         /**
-         * Builds the Dart channel contract. Status is COMPLETE only when the
-         * session produced enough analysable speech; anything less returns
-         * INCOMPLETE with human-readable `quality_reasons` for a retry prompt.
+         * Builds the Dart channel contract after the on-device model has run.
+         * Capture counts remain available for transparent review, but they do
+         * not gate a result. Only a genuine native analysis failure produces
+         * an INCOMPLETE response.
          */
         fun payload(
             audioSource: String,
@@ -403,28 +421,16 @@ class MainActivity : FlutterActivity() {
             if (analysisFailure != null) {
                 reasons += "Audio analysis could not be completed; please repeat the recording."
             }
-            if (voicedMs < 20_000) {
-                reasons += "At least 20 seconds of voiced audio is required."
-            }
-            if (childMs < 5_000) {
-                reasons += "At least 5 seconds of child vocalization is required."
-            }
-            if (transitions < 3) {
-                reasons += "At least 3 adult-to-child exchanges are required."
-            }
 
             val vttlMs = FeatureExtractor.medianTransitionGapMs(gapsMs)
             val pfv = pfvAnalyzer.analyzeFrames(pitchFrames, age)
             val cvr = FeatureExtractor.childVocalizationRatio(childMs, recordedMs)
-            if (age >= 36 && pfv.insufficientData) {
-                reasons += "Not enough confident child pitch frames for prosody analysis."
-            }
 
             val pfvSemitoneSd = pfv.semitoneSd ?: 0.0
             val vttlFlagged = vttlMs > 1000.0
             val pfvFlagged = age >= 36 && !pfv.insufficientData && pfvSemitoneSd < 15.0
             val cvrFlagged = cvr < cvrThreshold(age)
-            val complete = reasons.isEmpty() && gapsMs.isNotEmpty()
+            val complete = analysisFailure == null
 
             val f0Hz = pitchFrames.map { it.f0Hz }
             trace += mapOf(
@@ -449,6 +455,7 @@ class MainActivity : FlutterActivity() {
                 "child_age_months" to age,
                 "audio_source_used" to audioSource,
                 "analysis_status" to if (complete) "COMPLETE" else "INCOMPLETE",
+                "quality_gates_applied" to false,
                 "frames_processed" to vadFrames,
                 "voiced_seconds" to voicedMs / 1000.0,
                 "child_voiced_seconds" to childMs / 1000.0,

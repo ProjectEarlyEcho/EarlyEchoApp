@@ -5,6 +5,19 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Devadathan M R - pending
+Removed fixed audio-duration, child-vocalization, exchange, and pitch-coverage gates from the native result contract.
+The on-device model now produces a score whenever analysis succeeds, while retaining capture counts for transparent review and retries only for real model failures.
+
+### 2026-09-19 - Mathew Joseph - pending
+Added a Render Blueprint for the dashboard's Node service with its Supabase configuration prompted securely during initial setup.
+Deployment instructions document the required public variables and Supabase Auth redirect configuration.
+
+### 2026-09-19 - Mathew Joseph - pending
+Added persisted screening history with per-session details and refreshes after local saves or signed-in synchronization.
+Parent access policies now allow consent and screening uploads; the mobile and dashboard clients retain the shared role contract.
+Dashboard lint passed; Flutter validation could not run because this environment has no `flutter` or `dart` executable.
+
+### 2026-09-19 - Devadathan M R - pending
 Added an explainable combined assessment that brings questionnaire concerns and local video capture quality into the screening result.
 Questionnaire concerns can request clinician review, while the audio-only DEIC referral rule and video privacy safeguards remain intact.
 

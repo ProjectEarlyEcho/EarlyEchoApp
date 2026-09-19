@@ -9,7 +9,7 @@ import 'package:flutter_test/flutter_test.dart';
 final incompletePipelineResponse = <String, dynamic>{
   'analysis_status': 'INCOMPLETE',
   'quality_reasons': <String>[
-    'At least 20 seconds of voiced audio is required.',
+    'Audio analysis could not be completed; please repeat the recording.',
   ],
   'vttl_ms': 0.0,
   'pfv_std': 0.0,

@@ -33,7 +33,8 @@ void main() {
     expect(find.textContaining('फ़ोन से बाहर'), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsOneWidget);
 
-    // The mocked INCOMPLETE response routes to the retry prompt.
+    // A genuine model failure remains retriable; it must not become a
+    // fabricated COMPLETE result.
     await tester.pumpAndSettle();
     expect(find.byType(ResultScreen), findsOneWidget);
     expect(find.text('विश्लेषण अधूरा रहा'), findsOneWidget);

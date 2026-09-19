@@ -146,7 +146,9 @@ void main() {
       pfvFlagged: false,
       cvrFlagged: false,
       hindiExplanation: 'ऑडियो विश्लेषण अधूरा रहा।',
-      qualityReasons: ['At least 20 seconds of voiced audio is required.'],
+      qualityReasons: [
+        'Audio analysis could not be completed; please repeat the recording.',
+      ],
       incomplete: true,
     );
     final container = containerWith(result);

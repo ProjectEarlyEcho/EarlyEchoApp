@@ -54,12 +54,12 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
           'raw_video_retained': false,
         };
       }
-      final audioRaw = await AudioPipelineService.runPipeline(
-        childAgeMonths: session.childProfile?.childAgeMonths ?? 0,
-        protocolTimings: session.protocolTimings,
-      );
-      final raw = Map<String, dynamic>.from(audioRaw)
-        ..['video_quality'] = videoQuality;
+      final raw = Map<String, dynamic>.from(
+        await AudioPipelineService.runPipeline(
+          childAgeMonths: session.childProfile?.childAgeMonths ?? 0,
+          protocolTimings: session.protocolTimings,
+        ),
+      )..['video_quality'] = videoQuality;
       final features = SessionFeatures.fromChannelMap(raw);
       final result = ScoringEngine.score(features);
       final combined = CombinedScoringEngine.score(
