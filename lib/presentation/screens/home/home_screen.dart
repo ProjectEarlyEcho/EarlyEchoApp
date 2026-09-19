@@ -22,7 +22,19 @@ class HomeScreen extends ConsumerWidget {
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EarlyEcho'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/branding/earlyecho_mark.png',
+              width: 34,
+              height: 34,
+              excludeFromSemantics: true,
+            ),
+            const SizedBox(width: 8),
+            const Text('EarlyEcho'),
+          ],
+        ),
         actions: [
           if (auth.configured)
             IconButton(
@@ -80,10 +92,15 @@ class HomeScreen extends ConsumerWidget {
                           padding: const EdgeInsets.all(28),
                           child: Column(
                             children: [
-                              AppIconBadge(
-                                icon: Icons.hearing_rounded,
-                                color: scheme.primary,
-                                size: 72,
+                              Semantics(
+                                image: true,
+                                label: 'EarlyEcho — Every Voice Matters',
+                                child: Image.asset(
+                                  'assets/branding/earlyecho_logo.png',
+                                  height: 190,
+                                  fit: BoxFit.contain,
+                                  excludeFromSemantics: true,
+                                ),
                               ),
                               const SizedBox(height: 22),
                               Text(

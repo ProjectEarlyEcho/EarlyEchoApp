@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Devadathan M R - pending
+Applied the supplied EarlyEcho logo across the mobile home screen, Android launcher, splash screen, and app label.
+The complete wordmark and a compact mark preserve the original artwork while staying legible in their respective spaces.
+
+### 2026-09-19 - Devadathan M R - pending
 Disabled Kotlin's shared incremental compiler cache and serialised Gradle workers for this Windows Android build.
 This prevents cache-registration collisions between third-party plug-ins, so ordinary Flutter debug APK builds complete reliably.
 
