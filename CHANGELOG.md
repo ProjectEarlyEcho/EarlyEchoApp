@@ -4,6 +4,11 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-09-19 - Mathew Joseph - pending
+Added persisted screening history with per-session details and refreshes after local saves or signed-in synchronization.
+Parent access policies now allow consent and screening uploads; the mobile and dashboard clients retain the shared role contract.
+Dashboard lint passed; Flutter validation could not run because this environment has no `flutter` or `dart` executable.
+
 ### 2026-09-19 - Mathew Joseph
 Added a settings account section showing the signed-in user's display name, email, and shared Supabase role.
 Workers can now reach sign-in or sign-out directly from Settings.

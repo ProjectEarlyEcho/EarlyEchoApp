@@ -7,6 +7,7 @@ import '../presentation/screens/consent/consent_screen.dart';
 import '../presentation/screens/developmental_goals/developmental_goals_screen.dart';
 import '../presentation/screens/elicitation/elicitation_screen.dart';
 import '../presentation/screens/history/result_history_screen.dart';
+import '../presentation/screens/history/session_detail_screen.dart';
 import '../presentation/screens/home/home_screen.dart';
 import '../presentation/screens/language/language_selection_screen.dart';
 import '../presentation/screens/auth/login_screen.dart';
@@ -67,6 +68,12 @@ final appRoutes = <GoRoute>[
   GoRoute(
     path: '/history',
     builder: (context, state) => const ResultHistoryScreen(),
+  ),
+  GoRoute(
+    path: '/history/:id',
+    builder: (context, state) => SessionDetailScreen(
+      session: state.extra! as dynamic,
+    ),
   ),
   GoRoute(
     path: '/settings',
