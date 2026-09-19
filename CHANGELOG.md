@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Mathew Joseph
+Added a settings account section showing the signed-in user's display name, email, and shared Supabase role.
+Workers can now reach sign-in or sign-out directly from Settings.
+
+### 2026-09-19 - Mathew Joseph
 Added shared mobile care workflows for assigned children, dashboard-compatible screening uploads, appointments, conversations, and clinical notes.
 Mobile screening now carries the dashboard child identifier through local storage to `screening_sessions`.
 

@@ -392,6 +392,17 @@ class AppStrings {
     },
     'settings_language': {'hi': 'भाषा', 'en': 'Language'},
     'settings_language_change': {'hi': 'बदलें', 'en': 'Change'},
+    'settings_account': {'hi': 'खाता', 'en': 'Account'},
+    'settings_not_signed_in': {'hi': 'साइन इन नहीं है', 'en': 'Not signed in'},
+    'settings_signed_in': {'hi': 'साइन इन है', 'en': 'Signed in'},
+    'settings_sign_in': {'hi': 'साइन इन करें', 'en': 'Sign in'},
+    'settings_sign_out': {'hi': 'साइन आउट करें', 'en': 'Sign out'},
+    'settings_role_parent': {'hi': 'अभिभावक', 'en': 'Parent'},
+    'settings_role_care_worker': {
+      'hi': 'देखभाल कार्यकर्ता',
+      'en': 'Care worker',
+    },
+    'settings_role_admin': {'hi': 'प्रशासक', 'en': 'Administrator'},
   };
 
   /// Looks up [key] for [locale]; Hindi is the default and the fallback for
