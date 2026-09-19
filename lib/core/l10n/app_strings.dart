@@ -266,6 +266,17 @@ class AppStrings {
       'hi': 'माइक्रोफ़ोन उपलब्ध नहीं है — रिकॉर्डिंग के बिना जारी।',
       'en': 'Microphone unavailable — continuing without recording.',
     },
+    'el_video_live': {'hi': 'लाइव वीडियो', 'en': 'Live video'},
+    'el_video_idle': {'hi': 'वीडियो फ़्रेमिंग', 'en': 'Video framing'},
+    'el_video_note': {
+      'hi':
+          'वीडियो केवल इसी फ़ोन पर जाँचा जाता है। कोई वीडियो सहेजा नहीं जाता।',
+      'en': 'Video is analysed only on this phone. No video is saved.',
+    },
+    'el_video_unavailable': {
+      'hi': 'कैमरा उपलब्ध नहीं है — वीडियो के बिना जारी।',
+      'en': 'Camera unavailable — continuing without video.',
+    },
     'waveform_active': {
       'hi': 'रिकॉर्डिंग तरंग सक्रिय',
       'en': 'Recording waveform active',

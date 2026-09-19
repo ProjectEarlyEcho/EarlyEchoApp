@@ -6,6 +6,7 @@ import '../../../core/l10n/app_strings.dart';
 import '../../../data/models/session_features.dart';
 import '../../../domain/scoring_engine.dart';
 import '../../../services/audio_pipeline_service.dart';
+import '../../../services/video_pipeline_service.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
@@ -40,10 +41,23 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
       // Capture may still be winding down; stopping is a no-op if it
       // already ended when the last protocol finished.
       await AudioPipelineService.stopRecording();
-      final raw = await AudioPipelineService.runPipeline(
+      Map<String, dynamic> videoQuality;
+      try {
+        // Video quality is independent context. A camera failure never changes
+        // the acoustic feature vector, its status, or the screening result.
+        videoQuality = await VideoPipelineService.stopAnalysis();
+      } on VideoPipelineException {
+        videoQuality = const <String, dynamic>{
+          'analysis_status': 'UNAVAILABLE',
+          'raw_video_retained': false,
+        };
+      }
+      final audioRaw = await AudioPipelineService.runPipeline(
         childAgeMonths: session.childProfile?.childAgeMonths ?? 0,
         protocolTimings: session.protocolTimings,
       );
+      final raw = Map<String, dynamic>.from(audioRaw)
+        ..['video_quality'] = videoQuality;
       final features = SessionFeatures.fromChannelMap(raw);
       final result = ScoringEngine.score(features);
       ref

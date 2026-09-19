@@ -71,6 +71,7 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
         'steps': raw['decision_trace'] ?? const [],
         'frames_processed': raw['frames_processed'] ?? 0,
         'transition_count': raw['transition_count'] ?? 0,
+        'video_quality': raw['video_quality'] ?? const <String, dynamic>{},
       },
     );
 

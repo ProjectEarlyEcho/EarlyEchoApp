@@ -4,6 +4,11 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-09-19 - Devadathan M R - pending
+Added a parallel, on-device video-quality stream to guided elicitation with a live camera preview and CameraX/ML Kit processing.
+It retains only aggregate framing and movement context in the session trace; raw video and landmarks are discarded, while audio capture and scoring remain unchanged.
+The Android CI check now compiles the native integration, and the Flutter dependency range supports the current stable SDK.
+
 ### 2026-09-19 - Mathew Joseph
 Added a settings account section showing the signed-in user's display name, email, and shared Supabase role.
 Workers can now reach sign-in or sign-out directly from Settings.

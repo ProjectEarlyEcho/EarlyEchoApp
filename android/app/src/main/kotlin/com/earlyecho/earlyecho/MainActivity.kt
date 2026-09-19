@@ -4,11 +4,14 @@ import android.Manifest
 import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
+import android.view.Surface
+import com.earlyecho.earlyecho.video.VideoPipeline
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
+import io.flutter.view.TextureRegistry
 import java.io.File
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicInteger
@@ -33,6 +36,7 @@ import kotlin.math.sqrt
  */
 class MainActivity : FlutterActivity() {
     private val pipelineChannel = "com.earlyecho/audio_pipeline"
+    private val videoPipelineChannel = "com.earlyecho/video_pipeline"
 
     private val recorder = UnprocessedAudioRecorder()
     private val vad = WebRTCVadBridge(2)
@@ -41,6 +45,7 @@ class MainActivity : FlutterActivity() {
     private val extractor = FeatureExtractor(pfvAnalyzer)
     private val executor = Executors.newSingleThreadExecutor()
     private val aggregate = SessionAggregate(pfvAnalyzer)
+    private val videoPipeline by lazy { VideoPipeline(this) }
 
     @Volatile
     private var capturing = false
@@ -49,6 +54,8 @@ class MainActivity : FlutterActivity() {
     private var modelReady = false
     private var waveformSink: EventChannel.EventSink? = null
     private var permissionResult: MethodChannel.Result? = null
+    private var videoTexture: TextureRegistry.SurfaceTextureEntry? = null
+    private var videoPreviewSurface: Surface? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -81,6 +88,51 @@ class MainActivity : FlutterActivity() {
                 waveformSink = null
             }
         })
+        MethodChannel(flutterEngine.dartExecutor.binaryMessenger, videoPipelineChannel)
+            .setMethodCallHandler { call, result ->
+                try {
+                    when (call.method) {
+                        "requestPermission" -> videoPipeline.requestCameraPermission(result)
+                        "initializePreview" -> result.success(ensureVideoPreview(flutterEngine))
+                        "startAnalysis" -> videoPipeline.start(
+                            onStarted = { result.success(true) },
+                            onError = { message -> result.error("ERR_CAMERA", message, null) },
+                        )
+                        "stopAnalysis" -> {
+                            val summary = videoPipeline.stopAndCollect()
+                            releaseVideoPreview()
+                            result.success(summary)
+                        }
+                        "disposePreview" -> {
+                            releaseVideoPreview()
+                            result.success(true)
+                        }
+                        else -> result.notImplemented()
+                    }
+                } catch (e: Exception) {
+                    result.error("ERR_VIDEO_PIPELINE", e.message, null)
+                }
+            }
+    }
+
+    /** Allocates the Flutter texture only; no camera opens until startAnalysis. */
+    private fun ensureVideoPreview(flutterEngine: FlutterEngine): Long {
+        val current = videoTexture
+        if (current != null) return current.id()
+        val entry = flutterEngine.renderer.createSurfaceTexture()
+        entry.surfaceTexture().setDefaultBufferSize(480, 360)
+        videoTexture = entry
+        videoPreviewSurface = Surface(entry.surfaceTexture())
+        videoPipeline.setPreviewSurface(videoPreviewSurface)
+        return entry.id()
+    }
+
+    private fun releaseVideoPreview() {
+        videoPipeline.setPreviewSurface(null)
+        videoPreviewSurface?.release()
+        videoPreviewSurface = null
+        videoTexture?.release()
+        videoTexture = null
     }
 
     private fun requestMicrophonePermission(result: MethodChannel.Result) {
@@ -103,6 +155,12 @@ class MainActivity : FlutterActivity() {
         grantResults: IntArray,
     ) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == VIDEO_PERMISSION_REQUEST) {
+            videoPipeline.onCameraPermissionResult(
+                grantResults.firstOrNull() == PackageManager.PERMISSION_GRANTED,
+            )
+            return
+        }
         if (requestCode != MIC_PERMISSION_REQUEST) return
         val pending = permissionResult ?: return
         permissionResult = null
@@ -233,6 +291,8 @@ class MainActivity : FlutterActivity() {
     override fun onPause() {
         // Never keep the microphone open through an interruption.
         stopCapture()
+        videoPipeline.stopAndCollect()
+        releaseVideoPreview()
         super.onPause()
     }
 
@@ -240,11 +300,14 @@ class MainActivity : FlutterActivity() {
         stopCapture()
         executor.shutdownNow()
         diarizer.close()
+        videoPipeline.close()
+        releaseVideoPreview()
         super.onDestroy()
     }
 
     companion object {
         private const val MIC_PERMISSION_REQUEST = 42
+        private const val VIDEO_PERMISSION_REQUEST = 43
     }
 
     /**
