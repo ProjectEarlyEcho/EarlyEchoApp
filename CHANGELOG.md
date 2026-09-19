@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Devadathan M R - pending
+Replaced the camera preview's stale SurfaceTexture bridge with Flutter's renderer-managed SurfaceProducer.
+The preview now rebinds when Android recreates its drawing surface, preventing the live camera area from remaining black while analysis is active.
+
+### 2026-09-19 - Devadathan M R - pending
 Added a parallel, on-device video-quality stream to guided elicitation with a live camera preview and CameraX/ML Kit processing.
 It retains only aggregate framing and movement context in the session trace; raw video and landmarks are discarded, while audio capture and scoring remain unchanged.
 The Android CI check now compiles the native integration, and the Flutter dependency range supports the current stable SDK.

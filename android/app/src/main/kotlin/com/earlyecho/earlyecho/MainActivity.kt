@@ -4,7 +4,6 @@ import android.Manifest
 import android.app.ActivityManager
 import android.content.Context
 import android.content.pm.PackageManager
-import android.view.Surface
 import com.earlyecho.earlyecho.video.VideoPipeline
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -54,8 +53,7 @@ class MainActivity : FlutterActivity() {
     private var modelReady = false
     private var waveformSink: EventChannel.EventSink? = null
     private var permissionResult: MethodChannel.Result? = null
-    private var videoTexture: TextureRegistry.SurfaceTextureEntry? = null
-    private var videoPreviewSurface: Surface? = null
+    private var videoSurfaceProducer: TextureRegistry.SurfaceProducer? = null
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
@@ -115,24 +113,37 @@ class MainActivity : FlutterActivity() {
             }
     }
 
-    /** Allocates the Flutter texture only; no camera opens until startAnalysis. */
+    /**
+     * Allocates the Flutter-managed camera target only; no camera opens until
+     * startAnalysis. SurfaceProducer works with Flutter's current renderer
+     * backends and notifies us if Android recreates the drawing surface.
+     */
     private fun ensureVideoPreview(flutterEngine: FlutterEngine): Long {
-        val current = videoTexture
+        val current = videoSurfaceProducer
         if (current != null) return current.id()
-        val entry = flutterEngine.renderer.createSurfaceTexture()
-        entry.surfaceTexture().setDefaultBufferSize(480, 360)
-        videoTexture = entry
-        videoPreviewSurface = Surface(entry.surfaceTexture())
-        videoPipeline.setPreviewSurface(videoPreviewSurface)
-        return entry.id()
+        val producer = flutterEngine.renderer.createSurfaceProducer(
+            TextureRegistry.SurfaceLifecycle.manual,
+        )
+        producer.setSize(VIDEO_PREVIEW_WIDTH, VIDEO_PREVIEW_HEIGHT)
+        videoSurfaceProducer = producer
+        producer.setCallback(object : TextureRegistry.SurfaceProducer.Callback {
+            override fun onSurfaceAvailable() {
+                videoPipeline.setPreviewSurface(producer.surface)
+            }
+
+            override fun onSurfaceCleanup() {
+                videoPipeline.setPreviewSurface(null)
+            }
+        })
+        videoPipeline.setPreviewSurface(producer.surface)
+        return producer.id()
     }
 
     private fun releaseVideoPreview() {
         videoPipeline.setPreviewSurface(null)
-        videoPreviewSurface?.release()
-        videoPreviewSurface = null
-        videoTexture?.release()
-        videoTexture = null
+        videoSurfaceProducer?.setCallback(null)
+        videoSurfaceProducer?.release()
+        videoSurfaceProducer = null
     }
 
     private fun requestMicrophonePermission(result: MethodChannel.Result) {
@@ -308,6 +319,8 @@ class MainActivity : FlutterActivity() {
     companion object {
         private const val MIC_PERMISSION_REQUEST = 42
         private const val VIDEO_PERMISSION_REQUEST = 43
+        private const val VIDEO_PREVIEW_WIDTH = 480
+        private const val VIDEO_PREVIEW_HEIGHT = 360
     }
 
     /**
