@@ -92,15 +92,10 @@ class HomeScreen extends ConsumerWidget {
                           padding: const EdgeInsets.all(28),
                           child: Column(
                             children: [
-                              Semantics(
-                                image: true,
-                                label: 'EarlyEcho — Every Voice Matters',
-                                child: Image.asset(
-                                  'assets/branding/earlyecho_logo.png',
-                                  height: 190,
-                                  fit: BoxFit.contain,
-                                  excludeFromSemantics: true,
-                                ),
+                              AppIconBadge(
+                                icon: Icons.hearing_rounded,
+                                color: scheme.primary,
+                                size: 72,
                               ),
                               const SizedBox(height: 22),
                               Text(

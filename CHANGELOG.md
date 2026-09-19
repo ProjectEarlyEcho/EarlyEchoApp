@@ -5,6 +5,10 @@ This file records notable commit-level changes. Update it before every commit us
 ## Unreleased
 
 ### 2026-09-19 - Devadathan M R - pending
+Removed the duplicated large wordmark from the home-screen hero while retaining the compact app-bar mark and Android launcher icon.
+The hero returns to its neutral hearing cue, keeping the call to action focused without repeating the product identity.
+
+### 2026-09-19 - Devadathan M R - pending
 Applied the supplied EarlyEcho logo across the mobile home screen, Android launcher, splash screen, and app label.
 The complete wordmark and a compact mark preserve the original artwork while staying legible in their respective spaces.
 
