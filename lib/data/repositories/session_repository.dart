@@ -1,7 +1,11 @@
+import 'dart:convert';
+
+import 'package:collection/collection.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../local/database_helper.dart';
 import '../models/session_model.dart';
+import 'sync_conflict.dart';
 
 /// A timestamped parental-consent confirmation tied to a screening session.
 ///
@@ -18,10 +22,12 @@ class ConsentLog {
     required this.consentedAt,
     this.anganwadiId,
     this.workerName,
+    this.ownerId,
     this.synced = false,
   });
 
   final String id;
+  final String? ownerId;
 
   /// Null until the screening session row is created and linked.
   final String? sessionId;
@@ -32,15 +38,17 @@ class ConsentLog {
 
   Map<String, dynamic> toMap() => {
     'id': id,
+    'owner_id': ownerId,
     'session_id': sessionId,
     'anganwadi_id': anganwadiId,
     'worker_name': workerName,
-    'consented_at': consentedAt.toIso8601String(),
+    'consented_at': consentedAt.toUtc().toIso8601String(),
     'synced': synced ? 1 : 0,
   };
 
   factory ConsentLog.fromMap(Map<String, dynamic> map) => ConsentLog(
     id: map['id'] as String,
+    ownerId: map['owner_id'] as String?,
     sessionId: map['session_id'] as String?,
     anganwadiId: map['anganwadi_id'] as String?,
     workerName: map['worker_name'] as String?,
@@ -51,39 +59,55 @@ class ConsentLog {
   /// Row shape for the Supabase `consent_logs` audit table.
   Map<String, dynamic> toJson() => {
     'id': id,
+    'created_by': ownerId,
     'session_id': sessionId,
     'anganwadi_id': anganwadiId,
     'worker_name': workerName,
-    'consented_at': consentedAt.toIso8601String(),
+    'consented_at': consentedAt.toUtc().toIso8601String(),
   };
 }
 
-/// CRUD access to the local `sessions` and `consent_logs` tables.
-///
-/// The repository talks to [DatabaseHelper]; tests inject a helper backed by
-/// an in-memory `sqflite_common_ffi` database.
+/// An immutable owner-bound view of local screening and consent records.
+/// Null ownership is the offline-only partition, never adopted at sign-in.
+/// Completed records are append-only: identical saves replay without changing
+/// sync state; different content under an existing ID raises a conflict.
 class SessionRepository {
-  SessionRepository({DatabaseHelper? helper})
-    : _helper = helper ?? DatabaseHelper.instance;
+  SessionRepository({DatabaseHelper? helper, this.ownerId})
+    : _helper = helper ?? DatabaseHelper.instance {
+    if (ownerId == DatabaseHelper.legacyOwnerId) {
+      throw ArgumentError(
+        'Legacy records require explicit ownership recovery.',
+      );
+    }
+  }
 
   final DatabaseHelper _helper;
+  final String? ownerId;
+  String get _ownerFilter =>
+      ownerId == null ? 'owner_id IS NULL' : 'owner_id = ?';
+  List<String> get _ownerArgs => ownerId == null ? [] : [ownerId!];
 
-  /// Inserts or replaces a screening session.
-  Future<void> saveSession(SessionModel session) async {
+  /// Saves the result and links its consent atomically, including on replay.
+  Future<void> saveSession(SessionModel session, {String? consentLogId}) async {
     final db = await _helper.database;
-    await db.insert(
-      DatabaseHelper.tableSessions,
-      session.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.transaction((txn) async {
+      await _insertImmutable(
+        txn,
+        DatabaseHelper.tableSessions,
+        _owned(session.toMap()),
+      );
+      if (consentLogId != null) {
+        await _attachConsent(txn, consentLogId, session.id);
+      }
+    });
   }
 
   Future<SessionModel?> getSessionById(String id) async {
     final db = await _helper.database;
     final maps = await db.query(
       DatabaseHelper.tableSessions,
-      where: 'id = ?',
-      whereArgs: [id],
+      where: 'id = ? AND $_ownerFilter',
+      whereArgs: [id, ..._ownerArgs],
       limit: 1,
     );
     if (maps.isEmpty) return null;
@@ -95,6 +119,8 @@ class SessionRepository {
     final db = await _helper.database;
     final maps = await db.query(
       DatabaseHelper.tableSessions,
+      where: _ownerFilter,
+      whereArgs: _ownerArgs,
       orderBy: 'session_date DESC',
     );
     return maps.map(SessionModel.fromMap).toList();
@@ -106,8 +132,8 @@ class SessionRepository {
     final db = await _helper.database;
     final maps = await db.query(
       DatabaseHelper.tableSessions,
-      where: 'synced = ?',
-      whereArgs: [0],
+      where: 'synced = 0 AND $_ownerFilter',
+      whereArgs: _ownerArgs,
       orderBy: 'session_date ASC',
     );
     return maps.map(SessionModel.fromMap).toList();
@@ -116,39 +142,36 @@ class SessionRepository {
   Future<int> getUnsyncedCount() async {
     final db = await _helper.database;
     final result = await db.rawQuery(
-      'SELECT COUNT(*) FROM ${DatabaseHelper.tableSessions} WHERE synced = 0',
+      'SELECT COUNT(*) FROM ${DatabaseHelper.tableSessions} WHERE synced = 0 AND $_ownerFilter',
+      _ownerArgs,
     );
     return Sqflite.firstIntValue(result) ?? 0;
   }
 
-  /// Flips the `synced` flag after a successful cloud upload.
-  Future<void> markSynced(String sessionId) async {
-    final db = await _helper.database;
-    await db.update(
-      DatabaseHelper.tableSessions,
-      {'synced': 1},
-      where: 'id = ?',
-      whereArgs: [sessionId],
-    );
-  }
+  /// Acknowledge exactly the uploaded snapshot, not a newer/recreated row.
+  Future<void> markSynced(SessionModel snapshot) =>
+      _acknowledge(DatabaseHelper.tableSessions, snapshot.toMap());
 
   Future<void> deleteSession(String sessionId) async {
     final db = await _helper.database;
     await db.delete(
       DatabaseHelper.tableSessions,
-      where: 'id = ?',
-      whereArgs: [sessionId],
+      where: 'id = ? AND $_ownerFilter',
+      whereArgs: [sessionId, ..._ownerArgs],
     );
   }
 
   /// Records a parental-consent confirmation for the audit trail.
   Future<void> logConsent(ConsentLog log) async {
     final db = await _helper.database;
-    await db.insert(
-      DatabaseHelper.tableConsentLogs,
-      log.toMap(),
-      conflictAlgorithm: ConflictAlgorithm.replace,
-    );
+    await db.transaction((txn) async {
+      if (log.sessionId != null) await _requireSession(txn, log.sessionId!);
+      await _insertImmutable(
+        txn,
+        DatabaseHelper.tableConsentLogs,
+        _owned(log.toMap()),
+      );
+    });
   }
 
   /// Backfills `session_id` on a consent log written before its session row
@@ -158,45 +181,138 @@ class SessionRepository {
     String sessionId,
   ) async {
     final db = await _helper.database;
-    await db.update(
-      DatabaseHelper.tableConsentLogs,
-      {'session_id': sessionId},
-      where: 'id = ?',
-      whereArgs: [consentLogId],
-    );
+    await db.transaction((txn) => _attachConsent(txn, consentLogId, sessionId));
   }
 
-  /// Consent logs whose linked screening has not yet reached the cloud.
+  /// Linked consent queue, including records awaiting their screening upload.
   Future<List<ConsentLog>> getUnsyncedConsentLogs() async {
     final db = await _helper.database;
     final maps = await db.query(
       DatabaseHelper.tableConsentLogs,
-      where: 'synced = ? AND session_id IS NOT NULL',
-      whereArgs: [0],
+      where: 'synced = 0 AND session_id IS NOT NULL AND $_ownerFilter',
+      whereArgs: _ownerArgs,
       orderBy: 'consented_at ASC',
     );
     return maps.map(ConsentLog.fromMap).toList();
   }
 
   /// Marks a consent audit record as uploaded after a successful cloud write.
-  Future<void> markConsentLogSynced(String consentLogId) async {
-    final db = await _helper.database;
-    await db.update(
-      DatabaseHelper.tableConsentLogs,
-      {'synced': 1},
-      where: 'id = ?',
-      whereArgs: [consentLogId],
-    );
-  }
+  Future<void> markConsentLogSynced(ConsentLog snapshot) =>
+      _acknowledge(DatabaseHelper.tableConsentLogs, snapshot.toMap());
 
   Future<List<ConsentLog>> getConsentLogsForSession(String sessionId) async {
     final db = await _helper.database;
     final maps = await db.query(
       DatabaseHelper.tableConsentLogs,
-      where: 'session_id = ?',
-      whereArgs: [sessionId],
+      where: 'session_id = ? AND $_ownerFilter',
+      whereArgs: [sessionId, ..._ownerArgs],
       orderBy: 'consented_at ASC',
     );
     return maps.map(ConsentLog.fromMap).toList();
+  }
+
+  Map<String, dynamic> _owned(Map<String, dynamic> row) {
+    if (row['owner_id'] != null && row['owner_id'] != ownerId) {
+      throw StateError('The record belongs to a different account.');
+    }
+    return {...row, 'owner_id': ownerId, 'synced': 0};
+  }
+
+  Future<void> _insertImmutable(
+    Transaction txn,
+    String table,
+    Map<String, dynamic> row,
+  ) async {
+    final existing = await txn.query(
+      table,
+      where: 'id = ?',
+      whereArgs: [row['id']],
+    );
+    if (existing.isNotEmpty) {
+      if (!_sameRecord(existing.single, row)) {
+        throw SyncConflictException(table, row['id'] as String);
+      }
+      return;
+    }
+    await txn.insert(table, row);
+  }
+
+  Future<void> _requireSession(Transaction txn, String sessionId) async {
+    final sessions = await txn.query(
+      DatabaseHelper.tableSessions,
+      columns: ['id'],
+      where: 'id = ? AND $_ownerFilter',
+      whereArgs: [sessionId, ..._ownerArgs],
+    );
+    if (sessions.isEmpty) throw StateError('No screening for this account.');
+  }
+
+  Future<void> _attachConsent(
+    Transaction txn,
+    String consentLogId,
+    String sessionId,
+  ) async {
+    await _requireSession(txn, sessionId);
+    final rows = await txn.query(
+      DatabaseHelper.tableConsentLogs,
+      where: 'id = ? AND $_ownerFilter',
+      whereArgs: [consentLogId, ..._ownerArgs],
+    );
+    if (rows.isEmpty) throw StateError('No consent record for this account.');
+    final log = rows.single;
+    if (log['session_id'] == sessionId) return;
+    if (log['session_id'] != null || log['synced'] == 1) {
+      throw SyncConflictException(
+        DatabaseHelper.tableConsentLogs,
+        consentLogId,
+      );
+    }
+    await txn.update(
+      DatabaseHelper.tableConsentLogs,
+      {'session_id': sessionId},
+      where: 'id = ? AND $_ownerFilter',
+      whereArgs: [consentLogId, ..._ownerArgs],
+    );
+  }
+
+  Future<void> _acknowledge(String table, Map<String, dynamic> snapshot) async {
+    if (snapshot['owner_id'] != ownerId) {
+      throw StateError('Wrong acknowledgement owner.');
+    }
+    final db = await _helper.database;
+    await db.transaction((txn) async {
+      final rows = await txn.query(
+        table,
+        where: 'id = ? AND $_ownerFilter',
+        whereArgs: [snapshot['id'], ..._ownerArgs],
+      );
+      if (rows.isEmpty || !_sameRecord(rows.single, snapshot)) {
+        throw SyncConflictException(table, snapshot['id'] as String);
+      }
+      await txn.update(
+        table,
+        {'synced': 1},
+        where: 'id = ? AND $_ownerFilter',
+        whereArgs: [snapshot['id'], ..._ownerArgs],
+      );
+    });
+  }
+
+  static bool _sameRecord(
+    Map<String, dynamic> first,
+    Map<String, dynamic> second,
+  ) {
+    Map<String, dynamic> content(Map<String, dynamic> row) {
+      final value = {...row}..remove('synced');
+      if (value['decision_trace'] is String) {
+        value['decision_trace'] = jsonDecode(value['decision_trace'] as String);
+      }
+      return value;
+    }
+
+    return const DeepCollectionEquality().equals(
+      content(first),
+      content(second),
+    );
   }
 }

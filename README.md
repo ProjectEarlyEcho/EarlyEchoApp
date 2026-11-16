@@ -92,6 +92,11 @@ Parents can create accounts in the app. Care-worker accounts use the dashboard
 `clinician` role and must be provisioned by an administrator with an
 `anganwadi_id`; only care workers and administrators can sync screenings.
 
+Mobile sync uses immutable, owner-scoped screening and consent records. Apply
+`supabase/migrations/202611160001_mobile_sync_integrity.sql` after the earlier
+migrations before deploying this client. Replay, conflict handling, legacy
+record preservation, and local test instructions are in `docs/sync-integrity.md`.
+
 ### Dashboard
 
 ```bash

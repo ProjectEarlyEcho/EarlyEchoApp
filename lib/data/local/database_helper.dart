@@ -13,6 +13,8 @@ import 'package:sqflite/sqflite.dart';
 /// - v1: initial `sessions` + `consent_logs` schema.
 /// - v2: `consent_logs.session_id` becomes nullable — consent is confirmed
 ///   before the session row exists, so the link is backfilled later.
+/// - v3: owner partitions; pre-existing rows are retained in quarantine because
+///   earlier versions did not record an authenticated owner.
 ///
 /// The default [instance] opens `earlyecho.db` in the app documents area.
 /// Tests can inject a different [DatabaseFactory] (e.g. `databaseFactoryFfi`)
@@ -26,7 +28,8 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper();
 
   static const String databaseName = 'earlyecho.db';
-  static const int databaseVersion = 2;
+  static const int databaseVersion = 3;
+  static const String legacyOwnerId = 'legacy-unassigned';
 
   static const String tableSessions = 'sessions';
   static const String tableConsentLogs = 'consent_logs';
@@ -35,8 +38,16 @@ class DatabaseHelper {
   final String? _databasePath;
 
   Database? _database;
+  Future<Database>? _opening;
 
-  Future<Database> get database async => _database ??= await _open();
+  Future<Database> get database async {
+    if (_database != null) return _database!;
+    try {
+      return _database = await (_opening ??= _open());
+    } finally {
+      _opening = null;
+    }
+  }
 
   Future<Database> _open() async {
     final factory = _factory ?? databaseFactory;
@@ -66,6 +77,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE $tableSessions (
         id TEXT PRIMARY KEY,
+        owner_id TEXT,
         anganwadi_id TEXT NOT NULL,
         state_code TEXT NOT NULL,
         worker_name TEXT,
@@ -89,6 +101,7 @@ class DatabaseHelper {
     await db.execute('''
       CREATE TABLE $tableConsentLogs (
         id TEXT PRIMARY KEY,
+        owner_id TEXT,
         session_id TEXT REFERENCES $tableSessions(id) ON DELETE CASCADE,
         anganwadi_id TEXT,
         worker_name TEXT,
@@ -96,6 +109,16 @@ class DatabaseHelper {
         synced INTEGER NOT NULL DEFAULT 0
       )
     ''');
+    await _createOwnerIndexes(db);
+  }
+
+  static Future<void> _createOwnerIndexes(Database db) async {
+    await db.execute(
+      'CREATE INDEX sessions_owner_queue ON sessions(owner_id, synced, session_date)',
+    );
+    await db.execute(
+      'CREATE INDEX consent_owner_queue ON consent_logs(owner_id, synced, session_id)',
+    );
   }
 
   /// Schema migrations, gated on [oldVersion].
@@ -131,10 +154,18 @@ class DatabaseHelper {
         'ALTER TABLE consent_logs_new RENAME TO $tableConsentLogs',
       );
     }
+    if (oldVersion < 3) {
+      for (final table in [tableSessions, tableConsentLogs]) {
+        await db.execute('ALTER TABLE $table ADD COLUMN owner_id TEXT');
+        await db.update(table, {'owner_id': legacyOwnerId});
+      }
+      await _createOwnerIndexes(db);
+    }
   }
 
   /// Closes the handle so tests or teardown can reopen a clean database.
   Future<void> close() async {
+    await _opening;
     await _database?.close();
     _database = null;
   }

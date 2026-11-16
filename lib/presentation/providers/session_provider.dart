@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../data/models/biomarker_result.dart';
 import '../../data/models/child_profile.dart';
 import '../../data/models/session_features.dart';
 import '../../domain/milestone_engine.dart';
+import 'auth_provider.dart';
 
 /// In-progress screening session, shared across the flow screens.
 ///
@@ -13,6 +15,9 @@ import '../../domain/milestone_engine.dart';
 /// in-memory and resets with [SessionNotifier.reset].
 class SessionState {
   const SessionState({
+    this.ownerId,
+    this.sessionId,
+    this.sessionDate,
     this.childProfile,
     this.milestoneAnswers = const {},
     this.milestoneSummary,
@@ -24,6 +29,12 @@ class SessionState {
     this.biomarkerResult,
     this.pipelineResponse = const {},
   });
+
+  final String? ownerId;
+
+  /// Allocated once per screening, never when the result widget mounts.
+  final String? sessionId;
+  final DateTime? sessionDate;
 
   /// Enrollment details from the child profile screen.
   final ChildProfile? childProfile;
@@ -63,6 +74,8 @@ class SessionState {
   final Map<String, dynamic> pipelineResponse;
 
   SessionState copyWith({
+    String? sessionId,
+    DateTime? sessionDate,
     ChildProfile? childProfile,
     Map<String, bool>? milestoneAnswers,
     MilestoneSummary? milestoneSummary,
@@ -75,6 +88,9 @@ class SessionState {
     Map<String, dynamic>? pipelineResponse,
   }) {
     return SessionState(
+      ownerId: ownerId,
+      sessionId: sessionId ?? this.sessionId,
+      sessionDate: sessionDate ?? this.sessionDate,
       childProfile: childProfile ?? this.childProfile,
       milestoneAnswers: milestoneAnswers ?? this.milestoneAnswers,
       milestoneSummary: milestoneSummary ?? this.milestoneSummary,
@@ -90,7 +106,7 @@ class SessionState {
 }
 
 class SessionNotifier extends StateNotifier<SessionState> {
-  SessionNotifier() : super(const SessionState());
+  SessionNotifier({String? ownerId}) : super(SessionState(ownerId: ownerId));
 
   void setChildProfile(ChildProfile profile) {
     state = state.copyWith(childProfile: profile);
@@ -123,6 +139,8 @@ class SessionNotifier extends StateNotifier<SessionState> {
     required String consentLogId,
   }) {
     state = state.copyWith(
+      sessionId: state.sessionId ?? consentLogId,
+      sessionDate: state.sessionDate ?? consentedAt,
       consentedAt: consentedAt,
       consentLogId: consentLogId,
     );
@@ -142,6 +160,8 @@ class SessionNotifier extends StateNotifier<SessionState> {
     required Map<String, dynamic> rawResponse,
   }) {
     state = state.copyWith(
+      sessionId: state.sessionId ?? const Uuid().v4(),
+      sessionDate: state.sessionDate ?? DateTime.now().toUtc(),
       features: features,
       biomarkerResult: result,
       pipelineResponse: rawResponse,
@@ -149,12 +169,14 @@ class SessionNotifier extends StateNotifier<SessionState> {
   }
 
   void reset() {
-    state = const SessionState();
+    state = SessionState(ownerId: state.ownerId);
   }
 }
 
 final sessionProvider = StateNotifierProvider<SessionNotifier, SessionState>((
   ref,
 ) {
-  return SessionNotifier();
+  return SessionNotifier(
+    ownerId: ref.watch(appAuthProvider.select((auth) => auth.user?.id)),
+  );
 });

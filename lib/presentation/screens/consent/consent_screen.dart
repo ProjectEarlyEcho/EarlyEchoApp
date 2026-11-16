@@ -82,16 +82,19 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
     });
 
     final profile = ref.read(sessionProvider).childProfile;
+    final repository = ref.read(sessionRepositoryProvider);
+    final notifier = ref.read(sessionProvider.notifier);
     final log = ConsentLog(
       id: const Uuid().v4(),
       sessionId: null,
+      ownerId: repository.ownerId,
       anganwadiId: profile?.anganwadiId,
       workerName: profile?.workerName,
       consentedAt: DateTime.now(),
     );
 
     try {
-      await ref.read(sessionRepositoryProvider).logConsent(log);
+      await repository.logConsent(log);
     } catch (_) {
       if (mounted) {
         setState(() {
@@ -105,10 +108,13 @@ class _ConsentScreenState extends ConsumerState<ConsentScreen> {
       return;
     }
     if (!mounted) return;
+    if (!identical(repository, ref.read(sessionRepositoryProvider)) ||
+        !identical(notifier, ref.read(sessionProvider.notifier))) {
+      setState(() => _confirming = false);
+      return;
+    }
 
-    ref
-        .read(sessionProvider.notifier)
-        .recordConsent(consentedAt: log.consentedAt, consentLogId: log.id);
+    notifier.recordConsent(consentedAt: log.consentedAt, consentLogId: log.id);
     context.push('/elicitation');
   }
 

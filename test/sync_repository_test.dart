@@ -65,7 +65,7 @@ void main() {
       factory: databaseFactoryFfi,
       databasePath: inMemoryDatabasePath,
     );
-    sessions = SessionRepository(helper: helper);
+    sessions = SessionRepository(helper: helper, ownerId: 'worker-a');
     await helper.database;
   });
 
@@ -77,7 +77,11 @@ void main() {
     await sessions.saveSession(buildSession('s-1'));
     await sessions.saveSession(buildSession('s-2'));
     final uploader = FakeScreeningUploader();
-    final repo = SyncRepository(uploader: uploader, sessions: sessions);
+    final repo = SyncRepository(
+      uploader: uploader,
+      sessions: sessions,
+      currentOwnerId: () => 'worker-a',
+    );
 
     final result = await repo.syncPending();
 
@@ -95,7 +99,11 @@ void main() {
     await sessions.saveSession(buildSession('s-1'));
     await sessions.saveSession(buildSession('s-2'));
     final uploader = FakeScreeningUploader(failingIds: {'s-2'});
-    final repo = SyncRepository(uploader: uploader, sessions: sessions);
+    final repo = SyncRepository(
+      uploader: uploader,
+      sessions: sessions,
+      currentOwnerId: () => 'worker-a',
+    );
 
     final result = await repo.syncPending();
 
@@ -110,6 +118,7 @@ void main() {
     final retry = SyncRepository(
       uploader: FakeScreeningUploader(),
       sessions: sessions,
+      currentOwnerId: () => 'worker-a',
     );
     final retryResult = await retry.syncPending();
     expect(retryResult.uploaded, 1);
@@ -120,6 +129,7 @@ void main() {
     final repo = SyncRepository(
       uploader: FakeScreeningUploader(),
       sessions: sessions,
+      currentOwnerId: () => 'worker-a',
     );
 
     expect(await repo.pendingCount(), 0);
@@ -132,7 +142,11 @@ void main() {
 
   test('syncPending with no pending sessions is a no-op', () async {
     final uploader = FakeScreeningUploader();
-    final repo = SyncRepository(uploader: uploader, sessions: sessions);
+    final repo = SyncRepository(
+      uploader: uploader,
+      sessions: sessions,
+      currentOwnerId: () => 'worker-a',
+    );
 
     final result = await repo.syncPending();
 
@@ -170,6 +184,7 @@ void main() {
       uploader: FakeScreeningUploader(),
       consentUploader: consentUploader,
       sessions: sessions,
+      currentOwnerId: () => 'worker-a',
     );
 
     await repository.syncPending();

@@ -4,6 +4,10 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-11-16 - Mathew Joseph - base 4c338f8
+Made completed mobile screenings and consent immutable, owner-scoped, and replay-safe from SQLite through Supabase, with stable capture identity and preserved legacy records.
+Added account-transition and partial-failure handling plus focused SQLite, HTTP transport, and native PostgreSQL concurrency/RLS tests in CI; documented deployment and reconciliation semantics.
+
 ### 2026-09-19 - Devadathan M R - pending
 Added local n8n workflows for parent referral and follow-up reminders, 24-hour appointment reminders, and clinician appointment-request digests.
 Introduced a service-only, idempotent Supabase outbox with Docker-based migration, workflow-import, local-stack, and CI validation.

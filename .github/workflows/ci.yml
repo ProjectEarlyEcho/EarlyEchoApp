@@ -8,6 +8,20 @@ on:
   workflow_dispatch:
 
 jobs:
+  sync-database:
+    runs-on: ubuntu-latest
+    env:
+      SYNC_TEST_DATABASE_URL: postgresql://sync_test:sync_test@localhost:5432/earlyecho_sync_test
+    steps:
+      - uses: actions/checkout@v4
+      - name: Prepare native disposable PostgreSQL
+        run: |
+          sudo systemctl start postgresql
+          sudo -u postgres psql -v ON_ERROR_STOP=1 -c "CREATE ROLE sync_test LOGIN SUPERUSER PASSWORD 'sync_test'"
+          sudo -u postgres createdb -O sync_test earlyecho_sync_test
+      - name: Test mobile migrations, replay concurrency, and owner policies
+        run: python3 supabase/tests/test_sync_integrity.py
+
   dashboard:
     runs-on: ubuntu-latest
 

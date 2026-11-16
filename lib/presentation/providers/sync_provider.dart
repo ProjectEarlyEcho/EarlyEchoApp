@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/sync_repository.dart';
+import 'auth_provider.dart';
 
 /// User-facing sync status: how many screenings are still queued locally,
 /// whether an upload pass is running, and what the last pass produced.
@@ -46,25 +47,33 @@ class SyncNotifier extends StateNotifier<SyncState> {
   /// Re-reads the pending-upload count from the local database.
   Future<void> refreshPendingCount() async {
     final count = await _repository.pendingCount();
+    if (!mounted) return;
     state = state.copyWith(pendingCount: count);
   }
 
   /// Runs one upload pass over the pending queue.
   Future<SyncResult> syncNow() async {
     state = state.copyWith(isSyncing: true);
-    final result = await _repository.syncPending();
-    state = state.copyWith(
-      pendingCount: result.remaining,
-      isSyncing: false,
-      lastSyncTime: DateTime.now(),
-      lastResult: result,
-    );
-    return result;
+    try {
+      final result = await _repository.syncPending();
+      if (mounted) {
+        state = state.copyWith(
+          pendingCount: result.totalRemaining,
+          lastSyncTime: DateTime.now(),
+          lastResult: result,
+        );
+      }
+      return result;
+    } finally {
+      if (mounted) state = state.copyWith(isSyncing: false);
+    }
   }
 }
 
 final sessionRepositoryProvider = Provider<SessionRepository>(
-  (ref) => SessionRepository(),
+  (ref) => SessionRepository(
+    ownerId: ref.watch(appAuthProvider.select((auth) => auth.user?.id)),
+  ),
 );
 
 final syncRepositoryProvider = Provider<SyncRepository>(

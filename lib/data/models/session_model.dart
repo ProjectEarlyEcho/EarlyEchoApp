@@ -23,12 +23,14 @@ class SessionModel {
     required this.stateCode,
     required this.districtCode,
     this.workerName,
+    this.ownerId,
     this.childName,
     this.syncedToCloud = false,
     this.decisionTrace = const {},
   });
 
   final String id;
+  final String? ownerId;
   final String anganwadiId;
   final String? workerName;
   final String? childName;
@@ -52,12 +54,13 @@ class SessionModel {
   /// Row representation for the local `sessions` SQLite table.
   Map<String, dynamic> toMap() => {
     'id': id,
+    'owner_id': ownerId,
     'anganwadi_id': anganwadiId,
     'state_code': stateCode,
     'worker_name': workerName,
     'child_name': childName,
     'child_age_months': childAgeMonths,
-    'session_date': sessionDate.toIso8601String(),
+    'session_date': sessionDate.toUtc().toIso8601String(),
     'risk_level': riskLevel.name,
     'vttl_ms': vttlMs,
     'pfv_std': pfvStd,
@@ -74,6 +77,7 @@ class SessionModel {
   factory SessionModel.fromMap(Map<String, dynamic> map) {
     return SessionModel(
       id: map['id'] as String,
+      ownerId: map['owner_id'] as String?,
       anganwadiId: map['anganwadi_id'] as String,
       stateCode: map['state_code'] as String,
       workerName: map['worker_name'] as String?,
@@ -97,6 +101,7 @@ class SessionModel {
   /// JSON representation for the Supabase `screenings` table.
   Map<String, dynamic> toJson() => {
     'id': id,
+    'created_by': ownerId,
     'anganwadi_id': anganwadiId,
     'state_code': stateCode,
     'district_code': districtCode,
@@ -109,7 +114,7 @@ class SessionModel {
     'pfv_flagged': pfvFlagged,
     'cvr_flagged': cvrFlagged,
     'audio_source': audioSourceUsed,
-    'session_date': sessionDate.toIso8601String(),
+    'session_date': sessionDate.toUtc().toIso8601String(),
   };
 
   static Map<String, dynamic> _decodeTrace(Object? raw) {

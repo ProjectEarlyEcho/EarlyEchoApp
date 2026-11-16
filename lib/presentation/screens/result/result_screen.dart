@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../core/l10n/app_strings.dart';
 import '../../../core/theme.dart';
@@ -39,23 +38,27 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
   }
 
   Future<void> _persistIfComplete() async {
-    if (_persisted) return;
+    if (!mounted || _persisted) return;
     final session = ref.read(sessionProvider);
     final result = session.biomarkerResult;
     final features = session.features;
     final profile = session.childProfile;
     if (result == null || features == null || profile == null) return;
     if (result.incomplete) return;
+    if (session.sessionId == null || session.sessionDate == null) return;
+    final repository = ref.read(sessionRepositoryProvider);
+    if (repository.ownerId != session.ownerId) return;
     _persisted = true;
 
     final raw = session.pipelineResponse;
     final model = SessionModel(
-      id: const Uuid().v4(),
+      id: session.sessionId!,
+      ownerId: session.ownerId,
       anganwadiId: profile.anganwadiId,
       workerName: profile.workerName,
       childName: profile.childName,
       childAgeMonths: profile.childAgeMonths,
-      sessionDate: DateTime.now(),
+      sessionDate: session.sessionDate!,
       riskLevel: result.riskLevel,
       vttlMs: features.vttlMs,
       pfvStd: features.pfvStd,
@@ -73,17 +76,17 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
       },
     );
 
-    final repository = ref.read(sessionRepositoryProvider);
     try {
-      await repository.saveSession(model);
-      final consentLogId = session.consentLogId;
-      if (consentLogId != null) {
-        await repository.attachConsentLogToSession(consentLogId, model.id);
+      await repository.saveSession(model, consentLogId: session.consentLogId);
+      if (!mounted ||
+          !identical(repository, ref.read(sessionRepositoryProvider))) {
+        return;
       }
       await ref.read(syncProvider.notifier).syncNow();
     } catch (_) {
-      // A persistence failure must never blank the result screen; the
-      // session stays queued and the next launch re-attempts the write.
+      // Retain the in-memory result and stable identity for re-entry/retry.
+      // If persistence succeeded, a failed upload remains in the SQLite queue.
+      _persisted = false;
     }
   }
 

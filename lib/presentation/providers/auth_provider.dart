@@ -60,6 +60,10 @@ class AppAuthNotifier extends StateNotifier<AppAuthState> {
 
   final SupabaseClient? _client;
   StreamSubscription<AuthState>? _subscription;
+  int _profileRequest = 0;
+  int _authOperation = 0;
+  String? _loadingProfileFor;
+  Future<void>? _loadingProfile;
 
   Future<void> signIn({
     required String email,
@@ -68,15 +72,28 @@ class AppAuthNotifier extends StateNotifier<AppAuthState> {
   }) async {
     final client = _requireClient();
     if (client == null) return;
+    final operation = ++_authOperation;
     state = state.copyWith(loading: true, clearError: true);
     try {
       final response = await client.auth.signInWithPassword(
         email: email.trim(),
         password: password,
       );
+      if (!mounted ||
+          operation != _authOperation ||
+          client.auth.currentUser?.id != response.user?.id) {
+        return;
+      }
       await _loadProfile(response.user);
+      if (!mounted ||
+          operation != _authOperation ||
+          client.auth.currentUser?.id != response.user?.id) {
+        return;
+      }
+      if (state.error != null) return;
       if (state.role != expectedRole && state.role != AppUserRole.admin) {
         await client.auth.signOut();
+        if (!mounted || operation != _authOperation) return;
         state = state.copyWith(
           loading: false,
           clearUser: true,
@@ -86,7 +103,14 @@ class AppAuthNotifier extends StateNotifier<AppAuthState> {
       }
       state = state.copyWith(loading: false);
     } on AuthException catch (error) {
+      if (!mounted || operation != _authOperation) return;
       state = state.copyWith(loading: false, error: error.message);
+    } catch (_) {
+      if (!mounted || operation != _authOperation) return;
+      state = state.copyWith(
+        loading: false,
+        error: 'Could not sign in. Please try again.',
+      );
     }
   }
 
@@ -97,6 +121,7 @@ class AppAuthNotifier extends StateNotifier<AppAuthState> {
   }) async {
     final client = _requireClient();
     if (client == null) return;
+    final operation = ++_authOperation;
     state = state.copyWith(loading: true, clearError: true);
     try {
       final response = await client.auth.signUp(
@@ -104,6 +129,7 @@ class AppAuthNotifier extends StateNotifier<AppAuthState> {
         password: password,
         data: {'display_name': displayName.trim()},
       );
+      if (!mounted || operation != _authOperation) return;
       if (response.session == null) {
         state = state.copyWith(
           loading: false,
@@ -112,17 +138,29 @@ class AppAuthNotifier extends StateNotifier<AppAuthState> {
         return;
       }
       await _loadProfile(response.user);
+      if (!mounted || operation != _authOperation) return;
       state = state.copyWith(loading: false);
     } on AuthException catch (error) {
+      if (!mounted || operation != _authOperation) return;
       state = state.copyWith(loading: false, error: error.message);
+    } catch (_) {
+      if (!mounted || operation != _authOperation) return;
+      state = state.copyWith(
+        loading: false,
+        error: 'Could not create your account. Please try again.',
+      );
     }
   }
 
   Future<void> signOut() async {
     final client = _client;
     if (client == null) return;
+    _authOperation++;
+    _profileRequest++;
+    _loadingProfileFor = null;
+    _loadingProfile = null;
+    state = state.copyWith(clearUser: true, clearError: true, loading: false);
     await client.auth.signOut();
-    state = state.copyWith(clearUser: true, clearError: true);
   }
 
   SupabaseClient? _requireClient() {
@@ -131,26 +169,57 @@ class AppAuthNotifier extends StateNotifier<AppAuthState> {
     return null;
   }
 
-  Future<void> _loadProfile(User? user) async {
+  Future<void> _loadProfile(User? user) {
+    if (!mounted) return Future.value();
+    // Auth events and the sign-in response can request the same profile at
+    // once. Await one shared result before validating the selected role.
+    if (user != null &&
+        _loadingProfileFor == user.id &&
+        _loadingProfile != null) {
+      return _loadingProfile!;
+    }
+    _loadingProfileFor = user?.id;
+    late final Future<void> pending;
+    pending = _readProfile(user).whenComplete(() {
+      if (identical(_loadingProfile, pending)) {
+        _loadingProfile = null;
+        _loadingProfileFor = null;
+      }
+    });
+    return _loadingProfile = pending;
+  }
+
+  Future<void> _readProfile(User? user) async {
+    if (!mounted) return;
+    final request = ++_profileRequest;
     final client = _client;
     if (client == null || user == null) {
       state = state.copyWith(clearUser: true, loading: false);
       return;
     }
-    state = state.copyWith(loading: true, clearError: true);
+    // Publish the new identity immediately; never retain another account's
+    // role or owner-scoped providers while its profile request is in flight.
+    state = AppAuthState(configured: true, loading: true, user: user);
     try {
       final profile = await client
           .from('profiles')
           .select('role, display_name')
           .eq('id', user.id)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 30));
+      if (!mounted ||
+          request != _profileRequest ||
+          client.auth.currentUser?.id != user.id) {
+        return;
+      }
       final role = switch (profile?['role']) {
         'parent' => AppUserRole.parent,
         'clinician' => AppUserRole.careWorker,
         'admin' => AppUserRole.admin,
         _ => null,
       };
-      state = state.copyWith(
+      state = AppAuthState(
+        configured: true,
         loading: false,
         user: user,
         role: role,
@@ -160,9 +229,14 @@ class AppAuthNotifier extends StateNotifier<AppAuthState> {
             : null,
       );
     } catch (_) {
-      state = state.copyWith(
-        loading: false,
-        clearUser: true,
+      if (!mounted ||
+          request != _profileRequest ||
+          client.auth.currentUser?.id != user.id) {
+        return;
+      }
+      state = AppAuthState(
+        configured: true,
+        user: user,
         error: 'Could not load your EarlyEcho access role.',
       );
     }
@@ -170,6 +244,8 @@ class AppAuthNotifier extends StateNotifier<AppAuthState> {
 
   @override
   void dispose() {
+    _profileRequest++;
+    _authOperation++;
     _subscription?.cancel();
     super.dispose();
   }

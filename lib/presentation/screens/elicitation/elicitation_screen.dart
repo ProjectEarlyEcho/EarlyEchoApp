@@ -37,6 +37,10 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
 
   ElicitationAudioPlayer? _audio;
   bool _captureStarted = false;
+  late final SessionNotifier _session;
+
+  bool get _sessionActive =>
+      mounted && identical(_session, ref.read(sessionProvider.notifier));
 
   /// Lazily resolved so the field can also be stopped from [dispose]
   /// without reading providers during teardown.
@@ -51,7 +55,14 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
   @override
   void initState() {
     super.initState();
+    _session = ref.read(sessionProvider.notifier);
     _tickTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (!_sessionActive) {
+        _tickTimer?.cancel();
+        _audio?.stop();
+        unawaited(_stopCapture());
+        return;
+      }
       ref.read(elicitationControllerProvider.notifier).tick();
     });
   }
@@ -65,18 +76,25 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
   /// guided sequence — an empty capture simply yields an INCOMPLETE
   /// analysis with a retry prompt downstream.
   Future<void> _startProtocol() async {
+    if (!_sessionActive) return;
     final state = ref.read(elicitationControllerProvider);
+    final childAgeMonths =
+        ref.read(sessionProvider).childProfile?.childAgeMonths ?? 0;
     if (state.running || state.completed) return;
     if (!_captureStarted) {
       try {
         await AudioPipelineService.requestPermission();
+        if (!_sessionActive) return;
         await AudioPipelineService.startRecording(
-          childAgeMonths:
-              ref.read(sessionProvider).childProfile?.childAgeMonths ?? 0,
+          childAgeMonths: childAgeMonths,
         );
         _captureStarted = true;
+        if (!_sessionActive) {
+          await _stopCapture();
+          return;
+        }
       } catch (_) {
-        if (mounted) {
+        if (mounted && _sessionActive) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -90,6 +108,7 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
         }
       }
     }
+    if (!_sessionActive) return;
     ref.read(elicitationControllerProvider.notifier).start();
     try {
       await _player.playFor(state.current.key);
@@ -99,10 +118,22 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
   }
 
   void _skipProtocol() {
+    if (!_sessionActive) return;
     ref.read(elicitationControllerProvider.notifier).skip();
   }
 
+  Future<void> _stopCapture() async {
+    if (!_captureStarted) return;
+    _captureStarted = false;
+    try {
+      await AudioPipelineService.stopRecording();
+    } catch (_) {
+      // Stale capture must not re-enter the active account's flow on failure.
+    }
+  }
+
   Future<void> _replayInstruction() async {
+    if (!_sessionActive) return;
     final key = ref.read(elicitationControllerProvider).current.key;
     try {
       await _player.playFor(key);
@@ -134,7 +165,8 @@ class _ElicitationScreenState extends ConsumerState<ElicitationScreen> {
           } catch (_) {}
         }),
       );
-      ref.read(sessionProvider.notifier).recordProtocolTimings(next.timings);
+      if (!_sessionActive) return;
+      _session.recordProtocolTimings(next.timings);
       context.push('/processing');
     });
 

@@ -1,9 +1,13 @@
+import 'dart:async';
+
+import 'package:earlyecho/core/constants.dart';
 import 'package:earlyecho/core/routes.dart';
 import 'package:earlyecho/core/theme.dart';
 import 'package:earlyecho/presentation/providers/session_provider.dart';
 import 'package:earlyecho/presentation/screens/processing/processing_screen.dart';
 import 'package:earlyecho/services/elicitation_audio_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
@@ -97,6 +101,34 @@ void main() {
     expect(find.text('59'), findsOneWidget);
     expect(find.text('इस बच्चे को रैटल की आवाज़ सुनाएँ'), findsOneWidget);
   });
+
+  testWidgets(
+    'account reset while awaiting microphone permission stops the old capture flow',
+    (tester) async {
+      await tester.pumpWidget(buildApp());
+      await tester.pumpAndSettle();
+      final permission = Completer<void>();
+      final methods = <String>[];
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        const MethodChannel(EarlyEchoConstants.audioPipelineChannel),
+        (call) async {
+          methods.add(call.method);
+          if (call.method == 'requestPermission') await permission.future;
+          return null;
+        },
+      );
+      await tester.tap(find.text('रिकॉर्डिंग शुरू करें'));
+      await tester.pump();
+      container.invalidate(sessionProvider);
+      container.read(sessionProvider);
+      permission.complete();
+      await tester.pump(const Duration(seconds: 1));
+      expect(methods, ['requestPermission']);
+      expect(audio.played, isEmpty);
+      expect(container.read(sessionProvider).protocolTimings, isEmpty);
+      expect(find.byType(ProcessingScreen), findsNothing);
+    },
+  );
 
   testWidgets('walks all three protocols, then records timings and advances', (
     tester,

@@ -34,8 +34,10 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
   }
 
   Future<void> _analyze() async {
+    if (!mounted) return;
     setState(() => _error = null);
     final session = ref.read(sessionProvider);
+    final notifier = ref.read(sessionProvider.notifier);
     try {
       // Capture may still be winding down; stopping is a no-op if it
       // already ended when the last protocol finished.
@@ -46,14 +48,15 @@ class _ProcessingScreenState extends ConsumerState<ProcessingScreen> {
       );
       final features = SessionFeatures.fromChannelMap(raw);
       final result = ScoringEngine.score(features);
-      ref
-          .read(sessionProvider.notifier)
-          .recordAnalysisResult(
-            features: features,
-            result: result,
-            rawResponse: raw,
-          );
-      if (!mounted) return;
+      if (!mounted ||
+          !identical(notifier, ref.read(sessionProvider.notifier))) {
+        return;
+      }
+      notifier.recordAnalysisResult(
+        features: features,
+        result: result,
+        rawResponse: raw,
+      );
       context.pushReplacement('/result');
     } on AudioPipelineException catch (e) {
       if (mounted) setState(() => _error = e.message);

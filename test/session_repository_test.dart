@@ -2,6 +2,7 @@ import 'package:earlyecho/data/local/database_helper.dart';
 import 'package:earlyecho/data/models/biomarker_result.dart';
 import 'package:earlyecho/data/models/session_model.dart';
 import 'package:earlyecho/data/repositories/session_repository.dart';
+import 'package:earlyecho/data/repositories/sync_conflict.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -46,7 +47,7 @@ void main() {
       databasePath: inMemoryDatabasePath,
     );
     repository = SessionRepository(helper: helper);
-    // Force the database open so each test starts from the v1 schema.
+    // Force the database open so each test starts from the current schema.
     await helper.database;
   });
 
@@ -109,7 +110,7 @@ void main() {
       containsAll(['s-1', 's-2']),
     );
 
-    await repository.markSynced('s-1');
+    await repository.markSynced((await repository.getSessionById('s-1'))!);
 
     expect(await repository.getUnsyncedCount(), 1);
     final remaining = await repository.getUnsyncedSessions();
@@ -117,15 +118,18 @@ void main() {
     expect((await repository.getSessionById('s-1'))!.syncedToCloud, isTrue);
   });
 
-  test('saveSession upserts on the same id', () async {
+  test('a conflicting save preserves the original completed result', () async {
     await repository.saveSession(buildSession(id: 's-1'));
-    await repository.saveSession(
-      buildSession(id: 's-1', sessionDate: DateTime.utc(2026, 9, 19)),
+    await expectLater(
+      repository.saveSession(
+        buildSession(id: 's-1', sessionDate: DateTime.utc(2026, 9, 19)),
+      ),
+      throwsA(isA<SyncConflictException>()),
     );
 
     final all = await repository.getAllSessions();
     expect(all, hasLength(1));
-    expect(all.single.sessionDate, DateTime.utc(2026, 9, 19));
+    expect(all.single.sessionDate, DateTime.utc(2026, 9, 18, 10));
   });
 
   test('deleteSession removes the row and its consent logs', () async {
