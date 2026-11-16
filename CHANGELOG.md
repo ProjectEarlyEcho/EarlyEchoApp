@@ -4,6 +4,10 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-11-16 - Mathew Joseph - base 3e8c732
+Added native PostgREST acceptance coverage using signed fixture JWTs against the production sync RPCs and policies.
+Verified seven HTTP scenarios for replay, concurrent conflicts, ownership, consent linkage, and mutation denial; documented reproducible local setup.
+
 ### 2026-11-16 - Mathew Joseph - base 4c338f8
 Made completed mobile screenings and consent immutable, owner-scoped, and replay-safe from SQLite through Supabase, with stable capture identity and preserved legacy records.
 Added account-transition and partial-failure handling plus focused SQLite, HTTP transport, and native PostgreSQL concurrency/RLS tests in CI; documented deployment and reconciliation semantics.

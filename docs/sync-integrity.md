@@ -142,3 +142,39 @@ disposable database from the SQL tests, which reset their own fixture on each
 run. The Flutter HTTP fixture tests the actual Supabase client serialization,
 authorization header, status decoding, queue acknowledgement, and retry paths;
 the PostgreSQL suite independently verifies the production migration semantics.
+
+### Native PostgREST acceptance
+
+The optional HTTP acceptance suite joins those layers using a real PostgREST
+process and signed fixture JWTs. It verifies HTTP 409 conflict mapping, concurrent
+replay, lost-response recovery, owner-scoped reads, consent linkage, anonymous
+denial, and blocked direct mutations/profile escalation. It uses the same fixture
+identities as the SQL suite and does not reset the database itself.
+
+Prepare a separate database and start PostgREST in one terminal:
+
+```sh
+createdb earlyecho_sync_http
+export SYNC_TEST_DATABASE_URL=postgresql://localhost/earlyecho_sync_http
+python3 supabase/tests/test_sync_integrity.py --setup-only
+
+export SYNC_HTTP_JWT_SECRET='local-http-acceptance-fixture-secret-only'
+PGRST_DB_URI="$SYNC_TEST_DATABASE_URL" \
+PGRST_DB_ANON_ROLE=anon PGRST_DB_SCHEMAS=public \
+PGRST_JWT_SECRET="$SYNC_HTTP_JWT_SECRET" \
+PGRST_SERVER_HOST=127.0.0.1 PGRST_SERVER_PORT=53000 \
+  postgrest
+```
+
+In another terminal, run the suite with the same fixture secret:
+
+```sh
+SYNC_HTTP_URL=http://127.0.0.1:53000 \
+SYNC_HTTP_JWT_SECRET='local-http-acceptance-fixture-secret-only' \
+  python3 supabase/tests/test_sync_http.py
+```
+
+On 2026-11-16, all **7 HTTP acceptance tests passed** against native PostgreSQL
+18.7 and PostgREST 16.5, in addition to the 84 focused Flutter tests, 10 PostgreSQL
+tests, and clean analyzer reported for the implementation. These are local
+integration results; no production Supabase instance is involved.
