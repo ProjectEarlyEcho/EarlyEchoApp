@@ -7,6 +7,7 @@ import '../../../core/theme.dart';
 import '../../../data/models/biomarker_result.dart';
 import '../../../data/models/session_features.dart';
 import '../../../data/models/session_model.dart';
+import '../../../data/repositories/sync_conflict.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
 import '../../providers/sync_provider.dart';
@@ -30,6 +31,8 @@ class ResultScreen extends ConsumerStatefulWidget {
 
 class _ResultScreenState extends ConsumerState<ResultScreen> {
   bool _persisted = false;
+  bool _saving = false;
+  Object? _saveError;
 
   @override
   void initState() {
@@ -38,7 +41,8 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
   }
 
   Future<void> _persistIfComplete() async {
-    if (!mounted || _persisted) return;
+    if (!mounted || _persisted || _saving) return;
+    final capture = ref.read(sessionProvider.notifier);
     final session = ref.read(sessionProvider);
     final result = session.biomarkerResult;
     final features = session.features;
@@ -48,7 +52,15 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
     if (session.sessionId == null || session.sessionDate == null) return;
     final repository = ref.read(sessionRepositoryProvider);
     if (repository.ownerId != session.ownerId) return;
-    _persisted = true;
+    setState(() {
+      _saving = true;
+      _saveError = null;
+    });
+
+    bool isCurrentCapture() =>
+        mounted &&
+        identical(capture, ref.read(sessionProvider.notifier)) &&
+        identical(repository, ref.read(sessionRepositoryProvider));
 
     final raw = session.pipelineResponse;
     final model = SessionModel(
@@ -78,15 +90,24 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
 
     try {
       await repository.saveSession(model, consentLogId: session.consentLogId);
-      if (!mounted ||
-          !identical(repository, ref.read(sessionRepositoryProvider))) {
-        return;
-      }
+    } catch (error) {
+      if (!isCurrentCapture()) return;
+      setState(() {
+        _saving = false;
+        _saveError = error;
+      });
+      return;
+    }
+    if (!isCurrentCapture()) return;
+    setState(() {
+      _saving = false;
+      _persisted = true;
+    });
+    try {
       await ref.read(syncProvider.notifier).syncNow();
     } catch (_) {
-      // Retain the in-memory result and stable identity for re-entry/retry.
-      // If persistence succeeded, a failed upload remains in the SQLite queue.
-      _persisted = false;
+      // The result is durably saved on this device. A queue/transport failure
+      // must not turn that local success into a failed save or change its UUID.
     }
   }
 
@@ -137,11 +158,27 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
                           onRetry: _retry,
                           l10n: l10n,
                         )
-                      : _ScoredResult(
-                          result: result,
-                          features: features,
-                          onReferral: () => context.push('/referral'),
-                          l10n: l10n,
+                      : Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            if (_saving ||
+                                _persisted ||
+                                _saveError != null) ...[
+                              _SaveStatus(
+                                saved: _persisted,
+                                error: _saveError,
+                                onRetry: _persistIfComplete,
+                                l10n: l10n,
+                              ),
+                              const SizedBox(height: 16),
+                            ],
+                            _ScoredResult(
+                              result: result,
+                              features: features,
+                              onReferral: () => context.push('/referral'),
+                              l10n: l10n,
+                            ),
+                          ],
                         ),
                 ),
               ),
@@ -154,6 +191,54 @@ class _ResultScreenState extends ConsumerState<ResultScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _SaveStatus extends StatelessWidget {
+  const _SaveStatus({
+    required this.saved,
+    required this.error,
+    required this.onRetry,
+    required this.l10n,
+  });
+
+  final bool saved;
+  final Object? error;
+  final VoidCallback onRetry;
+  final Locale? l10n;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final key = error is SyncConflictException
+        ? 'result_save_conflict'
+        : error != null
+        ? 'result_save_error'
+        : saved
+        ? 'result_saved_local'
+        : 'result_saving';
+    return Semantics(
+      liveRegion: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            AppStrings.tr(key, l10n),
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: error == null ? scheme.onSurface : scheme.error,
+            ),
+          ),
+          if (error != null) ...[
+            const SizedBox(height: 8),
+            FilledButton.icon(
+              onPressed: onRetry,
+              icon: const Icon(Icons.save_outlined),
+              label: Text(AppStrings.tr('result_retry_save', l10n)),
+            ),
+          ],
+        ],
       ),
     );
   }

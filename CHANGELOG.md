@@ -4,6 +4,10 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-11-16 - Mathew Joseph - base 62d399a
+Separated new enrollment from result replay, including Back and direct-route entry, and exposed local save errors with same-identity retry.
+Coalesced mid-flight sync requests into owner-epoch-bound rescans without repeating failed rows; added capture lifecycle, persistence recovery, and concurrent queue regressions.
+
 ### 2026-11-16 - Mathew Joseph - base 3e8c732
 Added native PostgREST acceptance coverage using signed fixture JWTs against the production sync RPCs and policies.
 Verified seven HTTP scenarios for replay, concurrent conflicts, ownership, consent linkage, and mutation denial; documented reproducible local setup.

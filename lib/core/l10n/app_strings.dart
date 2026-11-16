@@ -331,6 +331,29 @@ class AppStrings {
     'result_rescreen': {'hi': 'दोबारा स्क्रीनिंग करें', 'en': 'Screen again'},
     'result_referral': {'hi': 'रेफरल बनाएँ', 'en': 'Generate referral'},
     'result_home': {'hi': 'होम पर जाएँ', 'en': 'Go home'},
+    'result_saving': {
+      'hi': 'इस फ़ोन पर परिणाम सहेजा जा रहा है…',
+      'en': 'Saving the result on this device…',
+    },
+    'result_saved_local': {
+      'hi': 'परिणाम इस फ़ोन पर सहेजा गया है।',
+      'en': 'Result saved on this device.',
+    },
+    'result_save_error': {
+      'hi':
+          'परिणाम सहेजा नहीं जा सका। यह स्क्रीन खुली रखें और फिर से प्रयास करें।',
+      'en': 'Result could not be saved. Keep this screen open and try again.',
+    },
+    'result_save_conflict': {
+      'hi':
+          'इस जाँच की आईडी से एक अलग परिणाम पहले से सहेजा गया है। वह सुरक्षित है; यह परिणाम सहेजा नहीं गया।',
+      'en':
+          'A different result is already saved with this screening ID. It was kept; this result has not been saved.',
+    },
+    'result_retry_save': {
+      'hi': 'सहेजने का फिर से प्रयास करें',
+      'en': 'Retry saving',
+    },
     'result_green': {
       'hi': 'हरा — सामान्य विकास',
       'en': 'Green — typical development',

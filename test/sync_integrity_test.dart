@@ -71,15 +71,17 @@ void main() {
   Future<void> seed({
     String id = 'screening',
     String consentId = 'consent',
+    SessionRepository? sessions,
   }) async {
-    await a.logConsent(
+    final repository = sessions ?? a;
+    await repository.logConsent(
       ConsentLog(
         id: consentId,
         sessionId: null,
         consentedAt: DateTime.utc(2026, 9, 18),
       ),
     );
-    await a.saveSession(buildSession(id: id), consentLogId: consentId);
+    await repository.saveSession(buildSession(id: id), consentLogId: consentId);
   }
 
   test(
@@ -227,6 +229,187 @@ void main() {
       await second;
       expect(uploader.screenings, hasLength(1));
       expect(uploader.consents, hasLength(1));
+    },
+  );
+
+  test(
+    'syncNow during a delayed upload drains newly saved screening and consent once',
+    () async {
+      await seed();
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      uploader.onScreening = (record) async {
+        if (record.id == 'screening') {
+          entered.complete();
+          await release.future;
+        }
+      };
+      final notifier = SyncNotifier(sync());
+      addTearDown(notifier.dispose);
+      final states = <SyncState>[];
+      notifier.addListener(states.add);
+      final first = notifier.syncNow();
+      await entered.future;
+      await seed(id: 'second', consentId: 'second-consent');
+      final followers = List.generate(8, (_) => notifier.syncNow());
+      release.complete();
+      final results = await Future.wait([first, ...followers]);
+      for (final result in results) {
+        expect(result.allSynced, isTrue);
+        expect(result.attempted, 2);
+        expect(result.uploaded, 2);
+        expect(result.consentUploaded, 2);
+      }
+      expect(uploader.screenings.map((row) => row.id), ['screening', 'second']);
+      expect(uploader.consents.map((row) => row.id).toSet(), {
+        'consent',
+        'second-consent',
+      });
+      expect(uploader.consents, hasLength(2));
+      expect(states.last.pendingCount, 0);
+      expect(states.last.isSyncing, isFalse);
+      expect(
+        (await a.getAllSessions()).every((row) => row.syncedToCloud),
+        isTrue,
+      );
+      expect(await a.getUnsyncedConsentLogs(), isEmpty);
+    },
+  );
+
+  test(
+    'requests arriving during a rescan are coalesced without losing later work',
+    () async {
+      await seed();
+      final enteredA = Completer<void>();
+      final enteredB = Completer<void>();
+      final releaseA = Completer<void>();
+      final releaseB = Completer<void>();
+      uploader.onScreening = (record) async {
+        if (record.id == 'screening') {
+          enteredA.complete();
+          await releaseA.future;
+        } else if (record.id == 'second') {
+          enteredB.complete();
+          await releaseB.future;
+        }
+      };
+      final repository = sync();
+      final first = repository.syncPending();
+      await enteredA.future;
+      await seed(id: 'second', consentId: 'second-consent');
+      final second = repository.syncPending();
+      releaseA.complete();
+      await enteredB.future;
+      await seed(id: 'third', consentId: 'third-consent');
+      final third = repository.syncPending();
+      releaseB.complete();
+      final results = await Future.wait([first, second, third]);
+      expect(
+        results.every(
+          (result) =>
+              result.allSynced &&
+              result.uploaded == 3 &&
+              result.consentUploaded == 3,
+        ),
+        isTrue,
+      );
+      expect(uploader.screenings.map((row) => row.id), [
+        'screening',
+        'second',
+        'third',
+      ]);
+      expect(uploader.consents, hasLength(3));
+    },
+  );
+
+  for (final conflict in [false, true]) {
+    test(
+      'rescan does not busy-retry ${conflict ? 'conflicting' : 'offline'} rows',
+      () async {
+        await seed();
+        final entered = Completer<void>();
+        final release = Completer<void>();
+        uploader.onScreening = (record) async {
+          if (record.id != 'screening') return;
+          if (!entered.isCompleted) entered.complete();
+          await release.future;
+          if (conflict) {
+            throw const SyncConflictException('screening', 'screening');
+          }
+          throw const SocketException('Connection unavailable.');
+        };
+        final repository = sync();
+        final first = repository.syncPending();
+        await entered.future;
+        await seed(id: 'second', consentId: 'second-consent');
+        final followers = List.generate(8, (_) => repository.syncPending());
+        release.complete();
+        final results = await Future.wait([
+          first,
+          ...followers,
+        ]).timeout(const Duration(seconds: 5));
+        expect(results.first.attempted, 2);
+        expect(results.first.failed, 1);
+        expect(results.first.conflicts, conflict ? 1 : 0);
+        expect(results.first.totalRemaining, 2);
+        expect(uploader.screenings.map((row) => row.id), [
+          'screening',
+          'second',
+        ]);
+        expect(uploader.consents.single.id, 'second-consent');
+        // A later explicit flight can retry the retained row normally.
+        uploader.onScreening = null;
+        expect((await repository.syncPending()).allSynced, isTrue);
+        expect(
+          uploader.screenings.where((row) => row.id == 'screening'),
+          hasLength(2),
+        );
+      },
+    );
+  }
+
+  test(
+    'new account drains independently and old epoch cannot resume on return',
+    () async {
+      await seed();
+      await seed(id: 'b-result', consentId: 'b-consent', sessions: b);
+      final entered = Completer<void>();
+      final release = Completer<void>();
+      uploader.onScreening = (record) async {
+        if (record.id == 'screening') {
+          entered.complete();
+          await release.future;
+        }
+      };
+      final oldEpoch = sync();
+      final pendingA = oldEpoch.syncPending();
+      await entered.future;
+      await seed(id: 'second', consentId: 'second-consent');
+      final followupA = oldEpoch.syncPending();
+      activeOwner = 'worker-b';
+      oldEpoch.dispose();
+      // B's request completes while A's network response is still blocked.
+      final resultB = await sync(b).syncPending();
+      expect(resultB.allSynced, isTrue);
+      expect((await b.getSessionById('b-result'))!.syncedToCloud, isTrue);
+      expect(uploader.consents.single.ownerId, 'worker-b');
+      activeOwner = 'worker-a';
+      release.complete();
+      expect((await pendingA).accountChanged, isTrue);
+      expect((await followupA).accountChanged, isTrue);
+      expect(await a.getUnsyncedCount(), 2);
+      expect(await a.getUnsyncedConsentLogs(), hasLength(2));
+      expect(uploader.screenings.map((row) => row.id), [
+        'screening',
+        'b-result',
+      ]);
+      uploader.onScreening = null;
+      expect((await sync().syncPending()).allSynced, isTrue);
+      expect(await b.getUnsyncedCount(), 0);
+      expect(
+        uploader.consents.where((row) => row.ownerId == 'worker-b'),
+        hasLength(1),
+      );
     },
   );
 

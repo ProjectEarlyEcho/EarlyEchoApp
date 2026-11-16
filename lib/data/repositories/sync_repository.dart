@@ -138,6 +138,20 @@ class SyncRepository {
   final SessionRepository _sessions;
   final String? Function() _currentOwnerId;
   Future<SyncResult>? _inFlight;
+  bool _rescanRequested = false;
+  bool _disposed = false;
+
+  bool get _ownerActive =>
+      !_disposed &&
+      _sessions.ownerId != null &&
+      _currentOwnerId() == _sessions.ownerId;
+
+  /// End this account epoch. An accepted late response stays queued for replay;
+  /// signing back into the same owner must use a new repository instance.
+  void dispose() {
+    _disposed = true;
+    _rescanRequested = false;
+  }
 
   static String? authenticatedOwnerId() {
     try {
@@ -159,17 +173,59 @@ class SyncRepository {
       await _sessions.getUnsyncedCount() +
       (await _sessions.getUnsyncedConsentLogs()).length;
 
-  Future<SyncResult> syncPending() =>
-      _inFlight ??= _syncPending().whenComplete(() {
-        _inFlight = null;
-      });
+  Future<SyncResult> syncPending() {
+    final active = _inFlight;
+    if (active != null) {
+      // Coalesce concurrent requests, but honor work saved after the active
+      // pass took its snapshot. All callers await the complete drain.
+      if (_ownerActive) _rescanRequested = true;
+      return active;
+    }
+    return _inFlight = _drain().whenComplete(() {
+      _inFlight = null;
+    });
+  }
 
-  Future<SyncResult> _syncPending() async {
-    final ownerId = _sessions.ownerId;
-    bool ownerActive() => ownerId != null && _currentOwnerId() == ownerId;
+  Future<SyncResult> _drain() async {
+    // Rescans only attempt newly discovered rows. Failures/conflicts wait for a
+    // later explicit flight instead of being retried in a busy loop.
+    final screeningsAttempted = <String>{};
+    final consentsAttempted = <String>{};
+    SyncResult? combined;
+    do {
+      _rescanRequested = false;
+      final next = await _syncPending(screeningsAttempted, consentsAttempted);
+      combined = SyncResult(
+        attempted: (combined?.attempted ?? 0) + next.attempted,
+        uploaded: (combined?.uploaded ?? 0) + next.uploaded,
+        failed: (combined?.failed ?? 0) + next.failed,
+        remaining: next.remaining,
+        conflicts: (combined?.conflicts ?? 0) + next.conflicts,
+        consentAttempted:
+            (combined?.consentAttempted ?? 0) + next.consentAttempted,
+        consentUploaded:
+            (combined?.consentUploaded ?? 0) + next.consentUploaded,
+        consentFailed: (combined?.consentFailed ?? 0) + next.consentFailed,
+        consentRemaining: next.consentRemaining,
+        consentConflicts:
+            (combined?.consentConflicts ?? 0) + next.consentConflicts,
+        offline: next.offline,
+        accountChanged: next.accountChanged,
+      );
+    } while (_rescanRequested &&
+        _ownerActive &&
+        !combined.offline &&
+        !combined.accountChanged);
+    return combined;
+  }
+
+  Future<SyncResult> _syncPending(
+    Set<String> screeningsAttempted,
+    Set<String> consentsAttempted,
+  ) async {
     final pending = await _sessions.getUnsyncedSessions();
     final uploader = _uploader;
-    if (uploader == null || !ownerActive()) {
+    if (uploader == null || !_ownerActive) {
       return SyncResult(
         attempted: 0,
         uploaded: 0,
@@ -177,6 +233,7 @@ class SyncRepository {
         remaining: pending.length,
         consentRemaining: (await _sessions.getUnsyncedConsentLogs()).length,
         offline: true,
+        accountChanged: _disposed,
       );
     }
 
@@ -185,11 +242,12 @@ class SyncRepository {
     var failed = 0;
     var conflicts = 0;
     for (final session in pending) {
-      if (!ownerActive()) break;
+      if (!_ownerActive) break;
+      if (!screeningsAttempted.add(session.id)) continue;
       attempted++;
       try {
         await uploader.upload(session);
-        if (!ownerActive()) break;
+        if (!_ownerActive) break;
         await _sessions.markSynced(session);
         uploaded++;
       } catch (error) {
@@ -203,18 +261,19 @@ class SyncRepository {
     var consentFailed = 0;
     var consentConflicts = 0;
     final consentUploader = _consentUploader;
-    if (consentUploader != null && ownerActive()) {
+    if (consentUploader != null && _ownerActive) {
       for (final log in await _sessions.getUnsyncedConsentLogs()) {
-        if (!ownerActive()) break;
+        if (!_ownerActive) break;
         // A failed/conflicting screening must never acquire a remote consent
         // link until that exact local screening has been acknowledged.
         final session = await _sessions.getSessionById(log.sessionId!);
         if (session == null || !session.syncedToCloud) continue;
-        if (!ownerActive()) break;
+        if (!_ownerActive) break;
+        if (!consentsAttempted.add(log.id)) continue;
         consentAttempted++;
         try {
           await consentUploader.uploadConsentLog(log);
-          if (!ownerActive()) break;
+          if (!_ownerActive) break;
           await _sessions.markConsentLogSynced(log);
           consentUploaded++;
         } catch (error) {
@@ -235,7 +294,7 @@ class SyncRepository {
       consentFailed: consentFailed,
       consentConflicts: consentConflicts,
       consentRemaining: (await _sessions.getUnsyncedConsentLogs()).length,
-      accountChanged: !ownerActive(),
+      accountChanged: !_ownerActive,
     );
   }
 }

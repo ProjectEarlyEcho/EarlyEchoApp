@@ -51,7 +51,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
     state = state.copyWith(pendingCount: count);
   }
 
-  /// Runs one upload pass over the pending queue.
+  /// Drains the pending queue, including coalesced requests made while uploading.
   Future<SyncResult> syncNow() async {
     state = state.copyWith(isSyncing: true);
     try {
@@ -76,9 +76,13 @@ final sessionRepositoryProvider = Provider<SessionRepository>(
   ),
 );
 
-final syncRepositoryProvider = Provider<SyncRepository>(
-  (ref) => SyncRepository(sessions: ref.watch(sessionRepositoryProvider)),
-);
+final syncRepositoryProvider = Provider<SyncRepository>((ref) {
+  final repository = SyncRepository(
+    sessions: ref.watch(sessionRepositoryProvider),
+  );
+  ref.onDispose(repository.dispose);
+  return repository;
+});
 
 final syncProvider = StateNotifierProvider<SyncNotifier, SyncState>(
   (ref) => SyncNotifier(ref.watch(syncRepositoryProvider)),

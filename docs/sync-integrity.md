@@ -5,9 +5,14 @@
 A screening gets a UUID and timestamp once in the capture state, normally from
 its persisted consent confirmation. Result-screen re-entry reuses that identity;
 it never creates a new record just because a widget mounts. New screenings start
-after the capture state is reset. Identity is not inferred from a child's name,
-age, centre, or other demographics. In-progress capture is not restored after an
-app restart; completed SQLite records retain their identity across restarts.
+by replacing the capture notifier when the worker chooses **Start new screening**
+and on a valid enrollment submission (including direct route entry or Back and
+resubmission). This clears earlier consent, analysis, and identity and rejects
+stale asynchronous capture callbacks. Returning to an existing result or retrying
+an incomplete analysis does not start a new screening. Identity is not inferred
+from a child's name, age, centre, or other demographics. In-progress capture is
+not restored after an app restart; completed SQLite records retain their identity
+across restarts.
 
 `SessionRepository.saveSession` writes the completed screening and attaches its
 consent in one SQLite transaction. Completed records are immutable. Saving the
@@ -16,6 +21,13 @@ Different content under that ID raises `SyncConflictException` and leaves the
 existing data intact. Consent can acquire its first session link, but cannot be
 relinked or silently rewritten. Incomplete analyses are never persisted as
 completed screenings.
+
+The result screen reports local save progress and only displays **Result saved
+on this device** after the SQLite transaction succeeds. A local storage failure
+or immutable conflict is shown with a **Retry saving** action. Retry retains the
+same UUID, timestamp, payload, and consent link; it cannot overwrite a conflict.
+Cloud/queue failures after a local commit do not misreport that durable save as
+a failed local write.
 
 The production `SupabaseScreeningUploader` calls these SECURITY INVOKER RPCs:
 
@@ -38,6 +50,13 @@ SQLite acknowledges the full uploaded snapshot only after a recognized remote
 success. A lost response, crash before acknowledgement, or failed local
 acknowledgement leaves a retryable row with the same ID. Sync is single-flight
 per repository; independent clients remain protected by server uniqueness.
+Concurrent `syncNow` calls share the full drain and request a coalesced queue
+rescan, so a screening saved during an upload is included without another login.
+Requests arriving during a rescan can schedule the next one. Each row is attempted
+at most once per flight, including failures: only a later explicit flight retries
+failed/conflicting records. Pending rows alone never trigger another pass, so
+offline and conflict queues do not cause a retry loop. Counts aggregate all passes
+and the final remaining count includes linked consent.
 Individual upload attempts have a 30-second response budget; a later remote
 commit is handled by replay, without a late local acknowledgement.
 Screening failures do not stop unrelated queued records. Consent is attempted
@@ -66,6 +85,9 @@ The uploader checks the live authenticated owner before and after its request;
 the queue checks again before acknowledgement and before the next upload. An
 in-flight request may already have committed for its original owner. That row
 can be replayed when the owner returns. Other accounts cannot drain its queue.
+Disposing an account's repository permanently stops its acknowledgements and
+rescans, even if the same owner signs back in before an old response arrives.
+The new account epoch uses its own repository and can sync independently.
 No account transition deletes stored screenings or consent.
 
 Remote `screenings` and `consent_logs` reads are owner-only, including for an
@@ -119,7 +141,13 @@ flutter test --no-pub --concurrency=1 \
   test/database_helper_test.dart test/session_repository_test.dart \
   test/sync_repository_test.dart test/sync_integrity_test.dart \
   test/supabase_sync_transport_test.dart test/account_scope_test.dart \
-  test/result_persistence_test.dart test/login_sync_test.dart
+  test/result_persistence_test.dart test/login_sync_test.dart \
+  test/capture_lifecycle_test.dart test/child_profile_screen_test.dart \
+  test/session_model_test.dart test/session_provider_test.dart \
+  test/result_screen_test.dart test/consent_persistence_test.dart \
+  test/consent_screen_test.dart test/elicitation_screen_test.dart \
+  test/processing_screen_test.dart test/login_screen_test.dart \
+  test/routes_test.dart
 ```
 
 The SQL runner uses Python's standard library and `psql`. Provide a **disposable
@@ -175,6 +203,11 @@ SYNC_HTTP_JWT_SECRET='local-http-acceptance-fixture-secret-only' \
 ```
 
 On 2026-11-16, all **7 HTTP acceptance tests passed** against native PostgreSQL
-18.7 and PostgREST 16.5, in addition to the 84 focused Flutter tests, 10 PostgreSQL
-tests, and clean analyzer reported for the implementation. These are local
-integration results; no production Supabase instance is involved.
+18.7 and PostgREST 16.5, alongside **10 PostgreSQL tests**. The subsequent capture
+lifecycle and coalesced-sync fixes passed **99 focused Flutter tests** across 19
+files and a clean analyzer. The Flutter regressions include two complete captures
+separated by Android/AppBar Back or direct enrollment, visible save failures and
+same-identity retry, mid-flight queue additions, bounded failure attempts, and
+account-epoch isolation. The unchanged database/HTTP suites were not rerun for
+these Dart-only fixes. These are local integration results; no production
+Supabase instance is involved.

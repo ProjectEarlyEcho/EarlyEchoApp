@@ -111,6 +111,10 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    // Enrollment submission is also a capture boundary for direct route entry
+    // or resubmission after Back. Never carry an earlier result/consent UUID
+    // into a newly enrolled screening.
+    ref.invalidate(sessionProvider);
     ref
         .read(sessionProvider.notifier)
         .setChildProfile(

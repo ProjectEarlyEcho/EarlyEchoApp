@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/l10n/app_strings.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/locale_provider.dart';
+import '../../providers/session_provider.dart';
 import '../../widgets/app_ui.dart';
 
 /// The worker's landing screen — entry point into the screening flow.
@@ -141,7 +142,13 @@ class HomeScreen extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
-                onPressed: () => context.push('/child-profile'),
+                onPressed: () {
+                  // Starting a new capture is distinct from returning to an
+                  // existing result. Replace the notifier so old async work
+                  // cannot write into the new capture, even for the same owner.
+                  ref.invalidate(sessionProvider);
+                  context.push('/child-profile');
+                },
                 icon: const Icon(Icons.add_rounded),
                 label: Text(AppStrings.tr('home_new_screening', l10n)),
               ),
