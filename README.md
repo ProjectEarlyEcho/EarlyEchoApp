@@ -96,6 +96,8 @@ Mobile sync uses immutable, owner-scoped screening and consent records. Apply
 `supabase/migrations/202611160001_mobile_sync_integrity.sql` after the earlier
 migrations before deploying this client. Replay, conflict handling, legacy
 record preservation, and local test instructions are in `docs/sync-integrity.md`.
+The implementation overview, component map, verified behavior, and rollout notes
+are in `docs/implementation-overview.md`.
 
 ### Dashboard
 

@@ -4,6 +4,10 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-11-16 - Mathew Joseph - base 4d218d2
+Documented the implemented capture, SQLite, queue, transport, and PostgreSQL integrity flow in a consolidated overview.
+Recorded replay and ownership contracts, local verification evidence, deployment order, and operational boundaries.
+
 ### 2026-11-16 - Mathew Joseph - base 62d399a
 Separated new enrollment from result replay, including Back and direct-route entry, and exposed local save errors with same-identity retry.
 Coalesced mid-flight sync requests into owner-epoch-bound rescans without repeating failed rows; added capture lifecycle, persistence recovery, and concurrent queue regressions.
