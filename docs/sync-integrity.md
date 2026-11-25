@@ -7,7 +7,8 @@ its persisted consent confirmation. Result-screen re-entry reuses that identity;
 it never creates a new record just because a widget mounts. New screenings start
 by replacing the capture notifier when the worker chooses **Start new screening**
 and on a valid enrollment submission (including direct route entry or Back and
-resubmission). This clears earlier consent, analysis, and identity and rejects
+resubmission). Selecting an assigned child also starts a fresh capture; enrollment
+retains that selected child while clearing the earlier result. This clears earlier consent, analysis, and identity and rejects
 stale asynchronous capture callbacks. Returning to an existing result or retrying
 an incomplete analysis does not start a new screening. Identity is not inferred
 from a child's name, age, centre, or other demographics. In-progress capture is
@@ -34,7 +35,17 @@ The production `SupabaseScreeningUploader` calls these SECURITY INVOKER RPCs:
 | RPC | JSONB parameter | Success result |
 | --- | --- | --- |
 | `public.sync_screening` | `p_screening` | `inserted` or `replayed` |
+| `public.sync_child_screening` | `p_screening`, `p_dashboard` | `inserted` or `replayed` |
 | `public.sync_consent_log` | `p_consent` | `inserted` or `replayed` |
+
+For an assigned-child capture, `sync_child_screening` atomically stores the
+owner's mobile screening and its care-portal projection in `screening_sessions`
+under the same UUID. Shared measurement fields must agree. The projection retains
+the capture timestamp and includes combined-assessment and video-quality metadata.
+A projection conflict rolls back the mobile insert; consent is only uploaded after
+both records are acknowledged. The child assignment is checked by server policies,
+and the portal retains guardian/assigned-clinician read access. Replays never
+overwrite an existing projection or move it to another child.
 
 Each RPC inserts under the existing UUID primary key. Concurrent inserts wait
 for the winning transaction, then compare the stored and incoming typed records.
@@ -92,16 +103,20 @@ No account transition deletes stored screenings or consent.
 
 Remote `screenings` and `consent_logs` reads are owner-only, including for an
 authenticated administrator. Inserts require `created_by = auth.uid()` and a
-provisioned `clinician` or `admin` profile. Clinicians must match their provisioned
-`anganwadi_id`; administrators may upload their own records for any centre.
+`parent`, provisioned `clinician`, or `admin` profile. Parents can upload their
+own mobile records; linked-child care projections require an assigned clinician.
+Clinicians must match their provisioned `anganwadi_id`; administrators may upload
+their own mobile records for any centre.
 Consent must reference an owned screening in the same centre. Client profile
 updates cannot change role or centre. Trusted service-role provisioning remains
 available. The portal's separate `screening_sessions`, guardian access, and
 assigned-clinician policies are not changed by the mobile policies.
 
 These are application-level local partitions, not encryption against somebody
-who controls the device filesystem. Raw audio, child names, worker names, and
-local decision traces are absent from screening upload payloads. Consent audit
+who controls the device filesystem. Raw audio, raw video, child names, and worker
+names are absent from screening upload payloads. The mobile `screenings` payload
+omits decision traces; the care projection includes aggregate quality and combined
+assessment metadata. Consent audit
 payloads retain the existing worker-name field, consent timestamp, centre, owner,
 and screening link.
 
@@ -109,9 +124,13 @@ and screening link.
 
 1. Apply `supabase/schema.sql` for a new database, then all migrations in filename
    order. On an existing deployment, apply only unapplied migrations, including
-   `202611160001_mobile_sync_integrity.sql`, before releasing the client.
-2. SQLite upgrades v1/v2 to v3 without deleting data. Since those versions did
-   not record the authenticated writer, their rows get the reserved
+   `202611160001_mobile_sync_integrity.sql` and
+   `202611250001_care_sync_integrity.sql`, before releasing the client.
+2. SQLite upgrades v1/v2 and both previously shipped v3 layouts to v4 without
+   deleting data. One v3 layout added ownership; the other added child links.
+   The upgrade detects existing columns, preserving owner IDs, child links,
+   consent links, and acknowledgement flags. Rows from versions that did
+   not record the authenticated writer get the reserved
    `legacy-unassigned` partition. They are retained but are not exposed or
    auto-uploaded to whichever account next signs in.
 3. Fresh signed-out/offline-only captures use the null-owner partition. They
@@ -211,3 +230,13 @@ same-identity retry, mid-flight queue additions, bounded failure attempts, and
 account-epoch isolation. The unchanged database/HTTP suites were not rerun for
 these Dart-only fixes. These are local integration results; no production
 Supabase instance is involved.
+
+On 2026-11-25, integration with parent and assigned-child care history passed
+**24 native PostgreSQL tests**, **16 real-PostgREST HTTP tests**, and **174 full-suite
+Flutter tests**. A subsequent owner-scoped history deep-link regression and its
+route/history checks passed **16 focused Flutter tests**. The analyzer and Dart
+format checks passed. The database suites cover both consent-owner migration
+paths, private parent uploads, shared care visibility, atomic mobile/projection
+rollback, revoked assignments, and concurrent conflicting/replayed requests.
+The Android debug APK also built successfully with `flutter build apk --debug
+--no-pub`, using a command-local 2 GiB Gradle heap.

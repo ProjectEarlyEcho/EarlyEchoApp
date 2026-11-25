@@ -1,9 +1,9 @@
 # Owner-scoped synchronization: implementation overview
 
 - Author: Mathew Joseph
-- Date: 2026-11-16
+- Updated: 2026-11-25
 - Branch: `feat/sync-integrity`
-- Implementation revision: `4d218d2`
+- Integration bases: `98a5e5b` and `2e9602d`
 
 ## Summary
 
@@ -23,7 +23,8 @@ New enrollment -> fresh capture state
     -> completed analysis
     -> SQLite transaction: immutable screening + consent linkage
     -> owner-bound queue drain
-    -> sync_screening RPC -> inserted / replayed / conflict
+    -> sync_screening or sync_child_screening RPC
+       -> inserted / replayed / conflict
     -> acknowledge the uploaded local snapshot
     -> sync_consent_log RPC -> acknowledge consent separately
 ```
@@ -45,8 +46,12 @@ the result is only described as saved after the SQLite transaction commits.
 | Account, capture, and queue lifecycle | `lib/presentation/providers/auth_provider.dart`, `lib/presentation/providers/session_provider.dart`, `lib/presentation/providers/sync_provider.dart` |
 | New-capture boundaries and save feedback | `lib/presentation/screens/home/home_screen.dart`, `lib/presentation/screens/child_profile/child_profile_screen.dart`, `lib/presentation/screens/result/result_screen.dart` |
 | Remote policies and replay RPCs | `supabase/migrations/202611160001_mobile_sync_integrity.sql` |
+| Parent uploads and atomic assigned-child care projections | `supabase/migrations/202611250001_care_sync_integrity.sql` |
 
-SQLite schema version 3 adds owner partitions to `sessions` and `consent_logs`.
+SQLite schema version 4 combines owner partitions in `sessions` and `consent_logs`
+with the `cloud_child_id` link. Both earlier version-3 layouts are supported:
+the owner-partition build and the child-link build. Existing ownership and child
+links survive the upgrade; missing ownership is quarantined rather than guessed.
 Queue indexes cover `(owner_id, synced, session_date)` and
 `(owner_id, synced, session_id)`. Foreign keys enforce consent/session linkage.
 Consent can be collected before the completed screening exists and linked in the
@@ -63,13 +68,23 @@ screenings.
 | RPC | Argument | Successful response |
 | --- | --- | --- |
 | `public.sync_screening` | `p_screening` JSONB | `inserted` or `replayed` |
+| `public.sync_child_screening` | `p_screening`, `p_dashboard` JSONB | `inserted` or `replayed` |
 | `public.sync_consent_log` | `p_consent` JSONB | `inserted` or `replayed` |
 
-Both RPCs run as `SECURITY INVOKER`, so row-level security applies to the caller.
+All RPCs run as `SECURITY INVOKER`, so row-level security applies to the caller.
 The UUID primary key arbitrates concurrent inserts. After an ID collision, the
-stored and incoming typed records are compared, excluding server-generated
-`created_at`. Equivalent numeric JSON representations and timestamp instants
-therefore replay successfully.
+stored and incoming typed records are compared, excluding the mobile records'
+server-generated `created_at`. The care projection's `created_at` is the capture
+timestamp and participates in its immutable payload. Equivalent numeric JSON
+representations and timestamp instants therefore replay successfully.
+
+Assigned-child captures use one atomic RPC to write the mobile screening and the
+portal's `screening_sessions` projection. Both share the UUID and measurement
+values; the projection carries the capture timestamp, child link, and combined
+assessment metadata. A conflict in either record rolls back the transaction.
+The local queue acknowledges the screening only after both records are accepted,
+then uploads consent referencing the mobile row. Existing guardian and assigned
+clinician reads continue to expose the portal history.
 
 | Situation | Behavior |
 | --- | --- |
@@ -94,12 +109,17 @@ acknowledgement.
 
 Remote `screenings` and `consent_logs` reads are owner-only, including for an
 authenticated administrator. Inserts require `created_by = auth.uid()` and a
-provisioned `clinician` or `admin` role. Clinicians must match their provisioned
-centre; administrators can upload their own records for any centre. Consent must
+`parent`, provisioned `clinician`, or `admin` role. Parents can sync their own
+mobile screenings and consent. Care projections require an assigned clinician.
+Clinicians must match their provisioned centre; administrators can upload their
+own mobile records for any centre. Consent must
 reference an owned screening in the same centre. Client profile updates cannot
 change role or centre.
 
-Account changes replace account-bound providers and clear in-memory capture data.
+History detail routes resolve their IDs through the active owner's repository,
+including deep links, and stop displaying a prior account's result after an
+account change. Account changes replace account-bound providers and clear
+in-memory capture data.
 Disposed repositories cannot acknowledge late responses, even if the same account
 signs in again. The next account epoch uses a new queue repository. The portal's
 separate `screening_sessions` and guardian/assigned-clinician access remain governed
@@ -118,13 +138,25 @@ only eligible after that exact screening is acknowledged. Counts include linked
 consent failures, so a queue with pending consent is not reported as fully synced.
 Unlinked consent stays local until a screening is completed.
 
-SQLite v1/v2 upgrades retain existing rows in `legacy-unassigned`, because older
-rows did not record an authenticated owner. Fresh signed-out captures use a
+SQLite v1/v2 and unowned v3 upgrades retain existing rows in `legacy-unassigned`,
+because those rows did not record an authenticated owner. Owner-aware v3 records
+keep their original partition and acknowledgement flags. Fresh signed-out captures use a
 separate null-owner partition. Neither category is automatically assigned to the
 next user who logs in. Remote legacy consent remains unowned; additive constraints
 preserve old rows while enforcing ownership for new writes.
 
 ## Verification
+
+Integration validation on 2026-11-25:
+
+| Layer | Result | Integration coverage |
+| --- | --- | --- |
+| Flutter | 174 full-suite tests passed; 16 follow-up history/route tests passed | Both SQLite v3 upgrade layouts, child-link retention, parent login sync, atomic care transport, durable-history refresh, genuine incomplete results, owner-scoped deep links |
+| PostgreSQL | 24 tests passed | Current and earlier migration chains, parent ownership, care projection rollback, revoked assignments, concurrent replay/conflicts |
+| PostgREST | 16 signed-JWT HTTP tests passed | The real authorization and replay contract for mobile, consent, and atomic care projections |
+| Static checks | Analyzer clean; Dart formatting verified | Integrated Flutter source and tests |
+| Android integration | Debug APK built successfully | Flutter, Kotlin, native capture, and Android dependency integration |
+| Care automations | Three workflows validated; two contract tests passed | Existing workflow and service-only outbox contracts |
 
 Recorded local validation on 2026-11-16:
 
@@ -148,20 +180,22 @@ suite has a separate local command; it is not an automatic CI job.
 
 1. On a new Supabase database, apply `supabase/schema.sql` and the migrations in
    filename order. On an existing deployment, apply only unapplied migrations,
-   including `202611160001_mobile_sync_integrity.sql`, before releasing the client.
+    including `202611160001_mobile_sync_integrity.sql` and
+    `202611250001_care_sync_integrity.sql`, before releasing the client.
 2. Provision clinician roles and centre assignments through a trusted administrative
    path. Configure the Flutter app with `SUPABASE_URL` and
    `SUPABASE_PUBLISHABLE_KEY` for authenticated synchronization.
-3. SQLite upgrades automatically to version 3. Retain legacy records for explicit
+3. SQLite upgrades automatically to version 4. Retain legacy records for explicit
    ownership review; logging in does not claim them.
 4. Use disposable databases for SQL/HTTP test fixtures. The SQL setup recreates
    the `public` and `auth` schemas.
 
 In-progress captures are not restored after process restart; completed SQLite
 records are durable. Local owner partitions provide application isolation, not
-filesystem encryption. Screening uploads omit raw audio, child names, worker names,
-and local decision traces; consent audit payloads retain the existing worker-name
-field. Conflict-resolution and legacy-ownership recovery screens are not included.
+filesystem encryption. Screening uploads omit raw audio, raw video, child names,
+and worker names. Care projections include aggregate quality and combined assessment
+metadata; consent audit payloads retain the existing worker-name field.
+Conflict-resolution and legacy-ownership recovery screens are not included.
 
 Detailed semantics, migration order, Flutter commands, and native PostgreSQL/
 PostgREST reproduction instructions: `docs/sync-integrity.md`.

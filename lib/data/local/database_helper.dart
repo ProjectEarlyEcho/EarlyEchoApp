@@ -13,8 +13,9 @@ import 'package:sqflite/sqflite.dart';
 /// - v1: initial `sessions` + `consent_logs` schema.
 /// - v2: `consent_logs.session_id` becomes nullable — consent is confirmed
 ///   before the session row exists, so the link is backfilled later.
-/// - v3: owner partitions; pre-existing rows are retained in quarantine because
-///   earlier versions did not record an authenticated owner.
+/// - v3: owner partitions or cloud-child links in independently shipped builds.
+/// - v4: both owner partitions and cloud-child links. Records without a recorded
+///   owner are retained in quarantine; existing ownership is preserved.
 ///
 /// The default [instance] opens `earlyecho.db` in the app documents area.
 /// Tests can inject a different [DatabaseFactory] (e.g. `databaseFactoryFfi`)
@@ -28,7 +29,7 @@ class DatabaseHelper {
   static final DatabaseHelper instance = DatabaseHelper();
 
   static const String databaseName = 'earlyecho.db';
-  static const int databaseVersion = 3;
+  static const int databaseVersion = 4;
   static const String legacyOwnerId = 'legacy-unassigned';
 
   static const String tableSessions = 'sessions';
@@ -82,6 +83,7 @@ class DatabaseHelper {
         state_code TEXT NOT NULL,
         worker_name TEXT,
         child_name TEXT,
+        cloud_child_id TEXT,
         child_age_months INTEGER NOT NULL,
         session_date TEXT NOT NULL,
         risk_level TEXT NOT NULL,
@@ -114,10 +116,10 @@ class DatabaseHelper {
 
   static Future<void> _createOwnerIndexes(Database db) async {
     await db.execute(
-      'CREATE INDEX sessions_owner_queue ON sessions(owner_id, synced, session_date)',
+      'CREATE INDEX IF NOT EXISTS sessions_owner_queue ON sessions(owner_id, synced, session_date)',
     );
     await db.execute(
-      'CREATE INDEX consent_owner_queue ON consent_logs(owner_id, synced, session_id)',
+      'CREATE INDEX IF NOT EXISTS consent_owner_queue ON consent_logs(owner_id, synced, session_id)',
     );
   }
 
@@ -154,12 +156,23 @@ class DatabaseHelper {
         'ALTER TABLE consent_logs_new RENAME TO $tableConsentLogs',
       );
     }
-    if (oldVersion < 3) {
+    if (oldVersion < 4) {
+      // Both v3 schemas exist in released branches. Inspect the shape instead
+      // of guessing from the version or assigning legacy records to a login.
       for (final table in [tableSessions, tableConsentLogs]) {
-        await db.execute('ALTER TABLE $table ADD COLUMN owner_id TEXT');
-        await db.update(table, {'owner_id': legacyOwnerId});
+        final columns = await db.rawQuery('PRAGMA table_info($table)');
+        if (!columns.any((column) => column['name'] == 'owner_id')) {
+          await db.execute('ALTER TABLE $table ADD COLUMN owner_id TEXT');
+          await db.update(table, {'owner_id': legacyOwnerId});
+        }
       }
       await _createOwnerIndexes(db);
+      final columns = await db.rawQuery('PRAGMA table_info($tableSessions)');
+      if (!columns.any((column) => column['name'] == 'cloud_child_id')) {
+        await db.execute(
+          'ALTER TABLE $tableSessions ADD COLUMN cloud_child_id TEXT',
+        );
+      }
     }
   }
 

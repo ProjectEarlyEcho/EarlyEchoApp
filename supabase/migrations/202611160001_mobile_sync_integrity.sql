@@ -1,10 +1,10 @@
 -- Completed mobile screenings and consent are immutable, owner-scoped records.
--- Keep legacy consent records unowned: the previous schema did not record the
--- writer and a screening link alone cannot prove who collected the consent.
+-- Preserve recorded consent ownership where available. Earlier schemas did not
+-- record the writer; a screening link alone cannot establish that ownership.
 begin;
 
 alter table public.consent_logs
-  add column created_by uuid references public.profiles(id);
+  add column if not exists created_by uuid references public.profiles(id);
 alter table public.consent_logs alter column created_by set default auth.uid();
 
 -- NOT VALID retains pre-existing unowned/unlinked records without making them

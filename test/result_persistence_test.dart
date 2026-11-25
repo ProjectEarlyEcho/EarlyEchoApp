@@ -161,12 +161,15 @@ void main() {
   ) async {
     analyze();
     repository.queueUnavailable = true;
+    // History may have been loaded on Home before this capture completes.
+    expect(await container.read(savedSessionsProvider.future), isEmpty);
     await tester.pumpWidget(screen());
     await tester.pumpAndSettle();
     expect(find.text(text('result_saved_local')), findsOneWidget);
     expect(find.text(text('result_save_error')), findsNothing);
     expect(find.text(text('result_retry_save')), findsNothing);
     expect(repository.saves, hasLength(1));
+    expect(await container.read(savedSessionsProvider.future), hasLength(1));
     expect((await repository.getAllSessions()).single.syncedToCloud, isFalse);
     expect(
       (await repository.getConsentLogsForSession(

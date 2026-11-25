@@ -55,6 +55,13 @@ dependencies {
     implementation("com.microsoft.onnxruntime:onnxruntime-android:1.18.0")
     // Prebuilt WebRTC VAD artifact used by the frame-level speech mask.
     implementation("com.cloudflare.realtimekit.android-vad:webrtc:2.0.10-cf.4")
+    // CameraX provides a lifecycle-bound live preview and bounded frame stream.
+    implementation("androidx.camera:camera-core:1.6.2")
+    implementation("androidx.camera:camera-camera2:1.6.2")
+    implementation("androidx.camera:camera-lifecycle:1.6.2")
+    // On-device face and pose inference. Neither dependency uploads frames.
+    implementation("com.google.mlkit:face-detection:16.1.7")
+    implementation("com.google.mlkit:pose-detection:18.0.0-beta5")
     testImplementation("junit:junit:4.13.2")
 }
 

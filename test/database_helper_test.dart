@@ -14,7 +14,7 @@ void main() {
   }
 
   test(
-    'fresh databases open at v3 with owner partitions and nullable consent links',
+    'fresh databases open at v4 with owner partitions and cloud-child links',
     () async {
       final helper = DatabaseHelper(
         factory: databaseFactoryFfi,
@@ -23,8 +23,13 @@ void main() {
       addTearDown(helper.close);
       final db = await helper.database;
 
-      expect(DatabaseHelper.databaseVersion, 3);
-      expect(await db.getVersion(), 3);
+      expect(DatabaseHelper.databaseVersion, 4);
+      expect(await db.getVersion(), 4);
+      final sessionColumns = await db.rawQuery('PRAGMA table_info(sessions)');
+      expect(
+        sessionColumns.map((column) => column['name']),
+        containsAll(['cloud_child_id', 'owner_id']),
+      );
 
       final columns = await consentLogColumns(db);
       expect(columns.map((column) => column['name']), contains('owner_id'));
@@ -40,13 +45,18 @@ void main() {
     },
   );
 
-  for (final legacyVersion in [1, 2]) {
+  for (final (legacyVersion, layout) in [
+    (1, 'legacy'),
+    (2, 'legacy'),
+    (3, 'owners'),
+    (3, 'children'),
+  ]) {
     test(
-      'v$legacyVersion databases migrate to v3 retaining and quarantining legacy records',
+      'v$legacyVersion $layout databases migrate to v4 preserving identity and ownership',
       () async {
         final path = p.join(
           Directory.systemTemp.path,
-          'earlyecho_v${legacyVersion}_upgrade_test.db',
+          'earlyecho_v${legacyVersion}_${layout}_upgrade_test.db',
         );
         await databaseFactoryFfi.deleteDatabase(path);
         addTearDown(() => databaseFactoryFfi.deleteDatabase(path));
@@ -65,6 +75,8 @@ void main() {
               state_code TEXT NOT NULL,
               worker_name TEXT,
               child_name TEXT,
+              ${layout == 'children' ? 'cloud_child_id TEXT,' : ''}
+              ${layout == 'owners' ? 'owner_id TEXT,' : ''}
               child_age_months INTEGER NOT NULL,
               session_date TEXT NOT NULL,
               risk_level TEXT NOT NULL,
@@ -86,6 +98,7 @@ void main() {
               session_id TEXT ${legacyVersion == 1 ? 'NOT NULL' : ''} REFERENCES sessions(id) ON DELETE CASCADE,
               anganwadi_id TEXT,
               worker_name TEXT,
+              ${layout == 'owners' ? 'owner_id TEXT,' : ''}
               consented_at TEXT NOT NULL,
               synced INTEGER NOT NULL DEFAULT 0
             )
@@ -100,12 +113,23 @@ void main() {
           'child_age_months': 30,
           'session_date': '2026-09-18T10:00:00.000Z',
           'risk_level': 'yellow',
+          'vttl_ms': 1200.0,
+          'pfv_std': 20.0,
+          'cvr_ratio': 0.2,
+          'vttl_flagged': 1,
+          'pfv_flagged': 0,
+          'cvr_flagged': 0,
+          'district_code': 'Patna',
+          'synced': 1,
+          if (layout == 'owners') 'owner_id': 'worker-a',
+          if (layout == 'children') 'cloud_child_id': 'assigned-child',
         });
         await v1.insert('consent_logs', {
           'id': 'c-old',
           'session_id': 's-1',
           'anganwadi_id': 'AW-001',
           'consented_at': '2026-09-18T09:55:00.000Z',
+          if (layout == 'owners') 'owner_id': 'worker-a',
         });
         await v1.close();
 
@@ -117,7 +141,12 @@ void main() {
         addTearDown(helper.close);
         final db = await helper.database;
 
-        expect(await db.getVersion(), 3);
+        expect(await db.getVersion(), 4);
+        final sessionColumns = await db.rawQuery('PRAGMA table_info(sessions)');
+        expect(
+          sessionColumns.map((column) => column['name']),
+          containsAll(['cloud_child_id', 'owner_id']),
+        );
         final columns = await consentLogColumns(db);
         final sessionCol = columns.firstWhere((c) => c['name'] == 'session_id');
         expect(sessionCol['notnull'], 0);
@@ -127,11 +156,18 @@ void main() {
         expect(migrated, hasLength(1));
         expect(migrated.single['id'], 'c-old');
         expect(migrated.single['session_id'], 's-1');
-        expect(migrated.single['owner_id'], DatabaseHelper.legacyOwnerId);
+        final expectedOwner = layout == 'owners'
+            ? 'worker-a'
+            : DatabaseHelper.legacyOwnerId;
+        expect(migrated.single['owner_id'], expectedOwner);
+        expect(migrated.single['synced'], 0);
+        final migratedSession = (await db.query('sessions')).single;
+        expect(migratedSession['synced'], 1);
         expect(
-          (await db.query('sessions')).single['owner_id'],
-          DatabaseHelper.legacyOwnerId,
+          migratedSession['cloud_child_id'],
+          layout == 'children' ? 'assigned-child' : isNull,
         );
+        expect(migratedSession['owner_id'], expectedOwner);
         expect(
           await SessionRepository(helper: helper).getAllSessions(),
           isEmpty,
@@ -141,7 +177,7 @@ void main() {
             helper: helper,
             ownerId: 'worker-a',
           ).getAllSessions(),
-          isEmpty,
+          layout == 'owners' ? hasLength(1) : isEmpty,
         );
 
         // New rows may omit session_id, and the FK still cascades deletes.

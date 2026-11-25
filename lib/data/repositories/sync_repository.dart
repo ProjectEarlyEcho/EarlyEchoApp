@@ -15,6 +15,7 @@ abstract class ConsentLogUploader {
 
 /// The server atomically compares immutable records on replay. A table upsert
 /// would silently overwrite a conflicting result and is deliberately avoided.
+/// Linked-child screenings also populate the shared care history atomically.
 class SupabaseScreeningUploader
     implements ScreeningUploader, ConsentLogUploader {
   const SupabaseScreeningUploader(
@@ -27,31 +28,32 @@ class SupabaseScreeningUploader
 
   @override
   Future<void> upload(SessionModel session) => _upload(
-    'sync_screening',
-    'p_screening',
+    session.cloudChildId == null ? 'sync_screening' : 'sync_child_screening',
     'screening',
     session.id,
     session.ownerId,
-    session.toJson(),
+    {
+      'p_screening': session.toJson(),
+      if (session.cloudChildId != null)
+        'p_dashboard': session.toDashboardJson(),
+    },
   );
 
   @override
   Future<void> uploadConsentLog(ConsentLog log) => _upload(
     'sync_consent_log',
-    'p_consent',
     'consent',
     log.id,
     log.ownerId,
-    log.toJson(),
+    {'p_consent': log.toJson()},
   );
 
   Future<void> _upload(
     String rpc,
-    String parameter,
     String type,
     String id,
     String? ownerId,
-    Map<String, dynamic> payload,
+    Map<String, dynamic> parameters,
   ) async {
     if (ownerId == null || _client.auth.currentUser?.id != ownerId) {
       throw StateError('Sign in to the record owner account before syncing.');
@@ -60,7 +62,7 @@ class SupabaseScreeningUploader
       // A timed-out request may still commit remotely; its stable identity
       // makes the next attempt a safe replay instead of a second record.
       final result = await _client
-          .rpc(rpc, params: {parameter: payload})
+          .rpc(rpc, params: parameters)
           .timeout(requestTimeout);
       if (_client.auth.currentUser?.id != ownerId) {
         throw StateError('The account changed during sync.');

@@ -1,4 +1,6 @@
 import 'package:earlyecho/data/models/child_profile.dart';
+import 'package:earlyecho/data/models/biomarker_result.dart';
+import 'package:earlyecho/data/models/session_features.dart';
 import 'package:earlyecho/domain/milestone_engine.dart';
 import 'package:earlyecho/presentation/providers/session_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -112,5 +114,48 @@ void main() {
     state = container.read(sessionProvider);
     expect(state.childProfile, isNull);
     expect(state.questionnaireSkipped, isFalse);
+  });
+
+  test('analysis records the combined assessment with video context', () {
+    final container = makeContainer();
+    const warning = MilestoneSummary(
+      totalApplicable: 3,
+      answeredYes: 1,
+      answeredNo: 2,
+      status: MilestoneStatus.warning,
+    );
+    container.read(sessionProvider.notifier).setQuestionnaire(const {
+      'a': false,
+      'b': false,
+    }, warning);
+
+    container
+        .read(sessionProvider.notifier)
+        .recordAnalysisResult(
+          features: const SessionFeatures(
+            vttlMs: 700,
+            pfvStd: 20,
+            cvrRatio: 0.2,
+            childAgeMonths: 30,
+          ),
+          result: const BiomarkerResult(
+            riskLevel: RiskLevel.green,
+            vttlFlagged: false,
+            pfvFlagged: false,
+            cvrFlagged: false,
+            hindiExplanation: '',
+          ),
+          rawResponse: const {
+            'video_quality': {
+              'analysis_status': 'AVAILABLE',
+              'frames_processed': 50,
+            },
+          },
+        );
+
+    final combined = container.read(sessionProvider).combinedResult!;
+    expect(combined.riskLevel, RiskLevel.yellow);
+    expect(combined.questionnaireEscalated, isTrue);
+    expect(combined.videoQuality.framesProcessed, 50);
   });
 }

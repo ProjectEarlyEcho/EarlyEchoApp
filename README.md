@@ -25,7 +25,8 @@ Flutter App (Android)  →  Kotlin Native Pipeline  →  Scoring Engine (Dart)
 |-------|-----------|
 | **Mobile App** | Flutter, Riverpod, GoRouter, sqflite |
 | **Native Audio** | Kotlin, AudioSource.UNPROCESSED, WebRTC VAD, Pyannote ONNX (INT8) |
-| **Scoring** | Dart — threshold rules on VTTL, PFV, CVR biomarkers |
+| **Native Video** | CameraX, ML Kit face and pose detection; aggregate framing quality only |
+| **Scoring** | Dart — explainable audio risk, questionnaire review signals, and video capture confidence |
 | **Cloud** | Supabase (Postgres + Auth + RLS) |
 | **Dashboard** | Next.js 16, Tailwind CSS 4, shadcn/ui |
 | **Referrals** | PDF generation + WhatsApp deep link sharing |
@@ -57,8 +58,8 @@ earlyecho/
 2. **Child Profile** — Name (optional), age (12–60 months), Anganwadi ID, district
 3. **Consent** — Malayalam audio plays, worker confirms parent consent
 4. **Elicitation** — 3 protocols: Rattle (60s), Toy Hide (80s), Imitation (60s)
-5. **Processing** — Native pipeline: VAD → Diarize → Feature Extract → Score
-6. **Result** — RED / YELLOW / GREEN with Malayalam explanation + biomarker chips
+5. **Processing** — Native audio pipeline plus local video framing-quality analysis
+6. **Result** — Explainable RED / YELLOW / GREEN assessment with audio, questionnaire, and video-quality inputs
 7. **Referral** (RED only) — PDF letter with nearest DEIC address, WhatsApp share
 
 
@@ -90,11 +91,14 @@ flutter run \
 
 Parents can create accounts in the app. Care-worker accounts use the dashboard
 `clinician` role and must be provisioned by an administrator with an
-`anganwadi_id`; only care workers and administrators can sync screenings.
+`anganwadi_id`. Parents can sync their own screenings and consent; assigned-child
+care history is published by authorized care workers.
 
 Mobile sync uses immutable, owner-scoped screening and consent records. Apply
-`supabase/migrations/202611160001_mobile_sync_integrity.sql` after the earlier
-migrations before deploying this client. Replay, conflict handling, legacy
+`supabase/migrations/202611160001_mobile_sync_integrity.sql` and
+`supabase/migrations/202611250001_care_sync_integrity.sql` after the earlier
+migrations before deploying this client. SQLite v4 preserves both earlier v3
+layouts, including ownership and child links. Replay, conflict handling, legacy
 record preservation, and local test instructions are in `docs/sync-integrity.md`.
 The implementation overview, component map, verified behavior, and rollout notes
 are in `docs/implementation-overview.md`.
@@ -122,5 +126,6 @@ commands are documented in [n8n/README.md](n8n/README.md).
 
 - Zero audio leaves the device
 - Only 1D numeric feature vectors are synced to cloud
+- No raw video, frames, facial landmarks, or pose landmarks are stored or synced
 - No child name transmitted unless explicitly enabled
 - DPDP Act 2023 compliant

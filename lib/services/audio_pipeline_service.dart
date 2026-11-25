@@ -76,4 +76,25 @@ class AudioPipelineService {
     });
     return Map<String, dynamic>.from(result as Map);
   }
+
+  /// Deterministic feature payload for non-production test sessions.
+  static Map<String, dynamic> testFixture(int childAgeMonths) => {
+    'analysis_status': 'COMPLETE',
+    'audio_source_used': 'TEST_FIXTURE',
+    'quality_reasons': <String>[],
+    'child_age_months': childAgeMonths,
+    'vttl_ms': 820.0,
+    'pfv_std': 18.4,
+    'pfv_z_score': 0.0,
+    'cvr_ratio': 0.18,
+    'vttl_flagged': false,
+    'pfv_flagged': false,
+    'cvr_flagged': false,
+    'transition_count': 6,
+    'voiced_seconds': 34.0,
+    'child_voiced_seconds': 8.0,
+    'adult_voiced_seconds': 26.0,
+    'frames_processed': 0,
+    'decision_trace': const <Map<String, Object>>[],
+  };
 }

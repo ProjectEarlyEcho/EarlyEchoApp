@@ -10,6 +10,7 @@ SessionModel buildSession({
   required String id,
   DateTime? sessionDate,
   bool synced = false,
+  String? cloudChildId,
 }) {
   return SessionModel(
     id: id,
@@ -18,6 +19,7 @@ SessionModel buildSession({
     districtCode: 'PAT',
     workerName: 'Sunita Devi',
     childName: 'Aarav',
+    cloudChildId: cloudChildId,
     childAgeMonths: 30,
     sessionDate: sessionDate ?? DateTime.utc(2026, 9, 18, 10),
     riskLevel: RiskLevel.yellow,

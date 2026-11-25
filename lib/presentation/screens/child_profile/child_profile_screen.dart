@@ -114,7 +114,11 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
     // Enrollment submission is also a capture boundary for direct route entry
     // or resubmission after Back. Never carry an earlier result/consent UUID
     // into a newly enrolled screening.
+    final selectedChild = ref.read(sessionProvider).selectedCareChild;
     ref.invalidate(sessionProvider);
+    if (selectedChild != null) {
+      ref.read(sessionProvider.notifier).selectCareChild(selectedChild);
+    }
     ref
         .read(sessionProvider.notifier)
         .setChildProfile(
@@ -127,6 +131,7 @@ class _ChildProfileScreenState extends ConsumerState<ChildProfileScreen> {
             stateCode: _stateCode!,
             districtCode: _districtController.text.trim(),
             workerName: _workerController.text.trim(),
+            cloudChildId: selectedChild?.id,
           ),
         );
     context.push('/developmental-goals');

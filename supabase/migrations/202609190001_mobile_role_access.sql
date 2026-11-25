@@ -25,6 +25,7 @@ create table if not exists public.consent_logs (
   anganwadi_id text,
   worker_name text,
   consented_at timestamptz not null,
+  created_by uuid references public.profiles(id) default auth.uid(),
   created_at timestamptz default now()
 );
 
@@ -32,6 +33,10 @@ alter table public.profiles
   add column if not exists anganwadi_id text;
 
 alter table public.screenings
+  add column if not exists created_by uuid references public.profiles(id)
+  default auth.uid();
+
+alter table public.consent_logs
   add column if not exists created_by uuid references public.profiles(id)
   default auth.uid();
 
@@ -53,6 +58,23 @@ create policy care_workers_insert_screenings on public.screenings
         and (role = 'admin' or anganwadi_id = screenings.anganwadi_id)
     )
   );
+
+drop policy if exists parents_insert_screenings on public.screenings;
+create policy parents_insert_screenings on public.screenings
+  for insert to authenticated
+  with check (
+    created_by = auth.uid()
+    and exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'parent'
+    )
+  );
+
+drop policy if exists parents_update_screenings on public.screenings;
+create policy parents_update_screenings on public.screenings
+  for update to authenticated
+  using (created_by = auth.uid())
+  with check (created_by = auth.uid());
 
 drop policy if exists care_workers_read_screenings on public.screenings;
 create policy care_workers_read_screenings on public.screenings
@@ -88,6 +110,23 @@ create policy care_workers_insert_consent on public.consent_logs
         and (role = 'admin' or anganwadi_id = consent_logs.anganwadi_id)
     )
   );
+
+drop policy if exists parents_insert_consent on public.consent_logs;
+create policy parents_insert_consent on public.consent_logs
+  for insert to authenticated
+  with check (
+    created_by = auth.uid()
+    and exists (
+      select 1 from public.profiles
+      where id = auth.uid() and role = 'parent'
+    )
+  );
+
+drop policy if exists parents_update_consent on public.consent_logs;
+create policy parents_update_consent on public.consent_logs
+  for update to authenticated
+  using (created_by = auth.uid())
+  with check (created_by = auth.uid());
 
 grant insert, select, update on public.screenings to authenticated;
 grant insert on public.consent_logs to authenticated;

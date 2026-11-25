@@ -49,3 +49,17 @@ npm run lint
 npm test
 npm run build
 ```
+
+## Deploy to Render
+
+The root [Render Blueprint](../render.yaml) deploys this Next.js application as
+a Node web service. In Render, create a new Blueprint from the repository and
+select the branch containing `render.yaml`. During the initial setup, enter the
+same values used locally for these environment variables:
+
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+
+Do not add a Supabase service-role key to the dashboard service. After Render
+assigns the service URL, add it to Supabase Auth's allowed redirect URLs and
+site URL if your Supabase project requires those settings.

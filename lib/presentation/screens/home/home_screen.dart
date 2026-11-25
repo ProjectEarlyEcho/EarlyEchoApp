@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -6,6 +8,7 @@ import '../../../core/l10n/app_strings.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/locale_provider.dart';
 import '../../providers/session_provider.dart';
+import '../../providers/sync_provider.dart';
 import '../../widgets/app_ui.dart';
 
 /// The worker's landing screen — entry point into the screening flow.
@@ -21,9 +24,38 @@ class HomeScreen extends ConsumerWidget {
     final l10n = ref.watch(appLocaleProvider);
     final auth = ref.watch(appAuthProvider);
     final scheme = Theme.of(context).colorScheme;
+    ref.listen<AppAuthState>(appAuthProvider, (previous, next) {
+      if (next.signedIn &&
+          (!(previous?.signedIn ?? false) ||
+              previous?.user?.id != next.user?.id)) {
+        unawaited(() async {
+          try {
+            await ref.read(syncProvider.notifier).syncNow();
+            if (context.mounted &&
+                ref.read(appAuthProvider).user?.id == next.user?.id) {
+              ref.invalidate(savedSessionsProvider);
+            }
+          } catch (_) {
+            // Signing in remains usable while the durable queue is offline.
+          }
+        }());
+      }
+    });
     return Scaffold(
       appBar: AppBar(
-        title: const Text('EarlyEcho'),
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Image.asset(
+              'assets/branding/earlyecho_mark.png',
+              width: 34,
+              height: 34,
+              excludeFromSemantics: true,
+            ),
+            const SizedBox(width: 8),
+            const Text('EarlyEcho'),
+          ],
+        ),
         actions: [
           if (auth.configured)
             IconButton(
@@ -38,6 +70,12 @@ class HomeScreen extends ConsumerWidget {
                   context.push('/login');
                 }
               },
+            ),
+          if (auth.signedIn)
+            IconButton(
+              icon: const Icon(Icons.medical_information_outlined),
+              tooltip: 'Care portal',
+              onPressed: () => context.push('/care'),
             ),
           IconButton(
             icon: const Icon(Icons.history_rounded),
@@ -147,7 +185,11 @@ class HomeScreen extends ConsumerWidget {
                   // existing result. Replace the notifier so old async work
                   // cannot write into the new capture, even for the same owner.
                   ref.invalidate(sessionProvider);
-                  context.push('/child-profile');
+                  context.push(
+                    auth.canSyncScreenings
+                        ? '/care/children'
+                        : '/child-profile',
+                  );
                 },
                 icon: const Icon(Icons.add_rounded),
                 label: Text(AppStrings.tr('home_new_screening', l10n)),

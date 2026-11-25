@@ -73,7 +73,7 @@ Instead of asking "Does your child say multi-syllable words?", the system analyz
 
 1. **Privacy by Design:** Audio never leaves the device. Only low-dimensional numeric features (VTTL in ms, PFV as std dev, CVR as ratio) are uploaded to Supabase. Mathematically impossible to reconstruct speech from these values.
 2. **Offline-First:** Full screening capability on a low-cost Android phone with no internet. Background sync when connectivity available.
-3. **Clinical Rigor:** Three independent, non-overlapping biomarkers. Result is only RED if ≥2 biomarkers flagged (≥75% specificity). YELLOW if 1 flagged (rescreen in 3 months).
+3. **Clinical Rigor:** Three independent, non-overlapping acoustic biomarkers remain the only automatic DEIC-referral rule: RED requires ≥2 acoustic biomarkers. Questionnaire concerns can request clinician review, while video contributes recording-quality confidence only.
 4. **Worker-Centric UX:** Pictograms over text, large tap targets (48×48dp), all instructions available in audio form, designed for outdoor use and one-handed operation.
 5. **Scalability:** No new infrastructure needed. Fits into existing Anganwadi worker workflow. Dashboard syncs anonymized data for district- and state-level early warning signals across India.
 
@@ -85,7 +85,7 @@ Instead of asking "Does your child say multi-syllable words?", the system analyz
 
 - **Child Profile Entry:** Name (optional), age in months (required: 12–60), Anganwadi ID, state, district
 - **Worker Authentication:** 4-digit PIN tied to Anganwadi ID (pre-provisioned in Supabase)
-- **Questionnaire (optional):** CDC Developmental Milestones (mPDFS-6) in Hindi (for context only; screening is acoustic, not questionnaire-based)
+- **Questionnaire (optional):** CDC Developmental Milestones (mPDFS-6) in Hindi. Two or more reported concerns can elevate a GREEN acoustic result to YELLOW clinician review, but cannot create an automatic DEIC referral.
 
 ### 3.2 Consent Screen
 
@@ -182,6 +182,8 @@ Instead of asking "Does your child say multi-syllable words?", the system analyz
 - **GREEN:** 0 biomarkers flagged → Typical development. No action.
 - **YELLOW:** 1 biomarker flagged → Monitor. Rescreen in 3 months.
 - **RED:** ≥2 biomarkers flagged → Refer to DEIC for comprehensive developmental evaluation.
+
+**Combined assessment safeguards:** Questionnaire concerns can elevate a GREEN acoustic result to YELLOW for clinician review. Camera-based face, pose, and movement signals are used only to report whether the visual capture was adequate; they do not assess behaviour or developmental risk and never change the risk band. The clinician-visible decision trace records every contributing input without retaining raw audio or video.
 
 ### 3.6 Referral Screen (RED cases only)
 

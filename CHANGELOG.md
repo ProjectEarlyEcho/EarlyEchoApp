@@ -4,6 +4,11 @@ This file records notable commit-level changes. Update it before every commit us
 
 ## Unreleased
 
+### 2026-11-25 - Mathew Joseph - bases 98a5e5b, 2e9602d
+Integrated owner-scoped synchronization with parent history, assigned-child care records, and combined audio/video assessment; added compatible SQLite v4 upgrades and atomic replay-safe care projections.
+Preserved capture identity across retries and child selection, refreshed owner-scoped local history after durable saves, and kept incomplete measurements incomplete instead of substituting synthetic results.
+Validated 174 full-suite Flutter tests plus 16 focused history/route checks, 24 PostgreSQL tests, 16 PostgREST tests, static checks, automation contracts, and the Android debug build.
+
 ### 2026-11-16 - Mathew Joseph - base 4d218d2
 Documented the implemented capture, SQLite, queue, transport, and PostgreSQL integrity flow in a consolidated overview.
 Recorded replay and ownership contracts, local verification evidence, deployment order, and operational boundaries.
@@ -23,6 +28,47 @@ Added account-transition and partial-failure handling plus focused SQLite, HTTP 
 ### 2026-09-19 - Devadathan M R - pending
 Added local n8n workflows for parent referral and follow-up reminders, 24-hour appointment reminders, and clinician appointment-request digests.
 Introduced a service-only, idempotent Supabase outbox with Docker-based migration, workflow-import, local-stack, and CI validation.
+
+### 2026-09-19 - Devadathan M R - pending
+Added an explainable combined assessment that brings questionnaire concerns and local video capture quality into the screening result.
+Questionnaire concerns can request clinician review, while the audio-only DEIC referral rule and video privacy safeguards remain intact.
+
+### 2026-09-19 - Devadathan M R - pending
+Removed the duplicated large wordmark from the home-screen hero while retaining the compact app-bar mark and Android launcher icon.
+The hero returns to its neutral hearing cue, keeping the call to action focused without repeating the product identity.
+
+### 2026-09-19 - Devadathan M R - pending
+Applied the supplied EarlyEcho logo across the mobile home screen, Android launcher, splash screen, and app label.
+The complete wordmark and a compact mark preserve the original artwork while staying legible in their respective spaces.
+
+### 2026-09-19 - Devadathan M R - pending
+Disabled Kotlin's shared incremental compiler cache and serialised Gradle workers for this Windows Android build.
+This prevents cache-registration collisions between third-party plug-ins, so ordinary Flutter debug APK builds complete reliably.
+
+### 2026-09-19 - Devadathan M R - pending
+Replaced the camera preview's stale SurfaceTexture bridge with Flutter's renderer-managed SurfaceProducer.
+The preview now rebinds when Android recreates its drawing surface, preventing the live camera area from remaining black while analysis is active.
+
+### 2026-09-19 - Devadathan M R - pending
+Added a parallel, on-device video-quality stream to guided elicitation with a live camera preview and CameraX/ML Kit processing.
+It retains only aggregate framing and movement context in the session trace; raw video and landmarks are discarded, while audio capture and scoring remain unchanged.
+The Android CI check now compiles the native integration, and the Flutter dependency range supports the current stable SDK.
+### 2026-09-19 - Mathew Joseph - pending
+Added a Render Blueprint for the dashboard's Node service with its Supabase configuration prompted securely during initial setup.
+Deployment instructions document the required public variables and Supabase Auth redirect configuration.
+
+### 2026-09-19 - Mathew Joseph - pending
+Added persisted screening history with per-session details and refreshes after local saves or signed-in synchronization.
+Parent access policies now allow consent and screening uploads; the mobile and dashboard clients retain the shared role contract.
+Dashboard lint passed; Flutter validation could not run because this environment has no `flutter` or `dart` executable.
+
+### 2026-09-19 - Mathew Joseph
+Added a settings account section showing the signed-in user's display name, email, and shared Supabase role.
+Workers can now reach sign-in or sign-out directly from Settings.
+
+### 2026-09-19 - Mathew Joseph
+Added shared mobile care workflows for assigned children, dashboard-compatible screening uploads, appointments, conversations, and clinical notes.
+Mobile screening now carries the dashboard child identifier through local storage to `screening_sessions`.
 
 ### 2026-09-19 - Devadathan M R - pending
 Removed inherited legacy-product references from documentation and source comments.

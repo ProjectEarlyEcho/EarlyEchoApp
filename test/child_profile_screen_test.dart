@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:earlyecho/core/routes.dart';
 import 'package:earlyecho/core/theme.dart';
+import 'package:earlyecho/data/repositories/care_repository.dart';
 import 'package:earlyecho/domain/milestone_engine.dart';
 import 'package:earlyecho/presentation/providers/session_provider.dart';
 import 'package:earlyecho/presentation/screens/child_profile/child_profile_screen.dart';
@@ -90,52 +91,72 @@ void main() {
     expect(find.byType(QuestionnaireScreen), findsNothing);
   });
 
-  testWidgets('a valid form stores the profile and navigates onward', (
-    tester,
-  ) async {
-    useTallSurface(tester);
-    final container = ProviderContainer(
-      overrides: [
-        milestoneQuestionsLoaderProvider.overrideWithValue(() async {
-          return MilestoneEngine.parseQuestions(
-            File('assets/data/milestones_hi.json').readAsStringSync(),
-          );
-        }),
-      ],
-    );
-    addTearDown(container.dispose);
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: MaterialApp.router(
-          theme: EarlyEchoTheme.lightTheme,
-          routerConfig: GoRouter(
-            initialLocation: '/child-profile',
-            routes: appRoutes,
+  testWidgets(
+    'enrollment resets capture identity and retains the assigned child',
+    (tester) async {
+      useTallSurface(tester);
+      final container = ProviderContainer(
+        overrides: [
+          milestoneQuestionsLoaderProvider.overrideWithValue(() async {
+            return MilestoneEngine.parseQuestions(
+              File('assets/data/milestones_hi.json').readAsStringSync(),
+            );
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+      final previousCapture = container.read(sessionProvider.notifier);
+      previousCapture.selectCareChild(
+        const CareChild(id: 'assigned-child-id', displayName: 'आरव'),
+      );
+      previousCapture.recordConsent(
+        consentedAt: DateTime.utc(2026, 11, 25),
+        consentLogId: 'previous-capture-id',
+      );
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp.router(
+            theme: EarlyEchoTheme.lightTheme,
+            routerConfig: GoRouter(
+              initialLocation: '/child-profile',
+              routes: appRoutes,
+            ),
           ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    await fillField(tester, 'बच्चे का नाम (वैकल्पिक)', 'आरव');
-    await fillValidForm(tester);
-    await tester.tap(find.text('प्रश्नावली की ओर बढ़ें'));
-    await tester.pumpAndSettle();
+      await fillField(tester, 'बच्चे का नाम (वैकल्पिक)', 'आरव');
+      await fillValidForm(tester);
+      await tester.tap(find.text('प्रश्नावली की ओर बढ़ें'));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(DevelopmentalGoalsScreen), findsOneWidget);
-    await tester.tap(find.text('प्रश्नावली की ओर बढ़ें'));
-    await tester.pumpAndSettle();
-    expect(find.byType(QuestionnaireScreen), findsOneWidget);
+      expect(find.byType(DevelopmentalGoalsScreen), findsOneWidget);
+      await tester.tap(find.text('प्रश्नावली की ओर बढ़ें'));
+      await tester.pumpAndSettle();
+      expect(find.byType(QuestionnaireScreen), findsOneWidget);
 
-    final profile = container.read(sessionProvider).childProfile;
-    expect(profile, isNotNull);
-    expect(profile!.childName, 'आरव');
-    expect(profile.childAgeMonths, 30);
-    expect(profile.isAgeValid, isTrue);
-    expect(profile.anganwadiId, 'IN-MP-042');
-    expect(profile.stateCode, 'Madhya Pradesh');
-    expect(profile.districtCode, 'Indore');
-    expect(profile.workerName, 'सीमा');
-  });
+      final profile = container.read(sessionProvider).childProfile;
+      expect(profile, isNotNull);
+      expect(profile!.childName, 'आरव');
+      expect(profile.childAgeMonths, 30);
+      expect(profile.isAgeValid, isTrue);
+      expect(profile.anganwadiId, 'IN-MP-042');
+      expect(profile.stateCode, 'Madhya Pradesh');
+      expect(profile.districtCode, 'Indore');
+      expect(profile.workerName, 'सीमा');
+      expect(profile.cloudChildId, 'assigned-child-id');
+      expect(
+        container.read(sessionProvider).selectedCareChild?.id,
+        'assigned-child-id',
+      );
+      expect(container.read(sessionProvider).sessionId, isNull);
+      expect(container.read(sessionProvider).consentLogId, isNull);
+      expect(
+        identical(container.read(sessionProvider.notifier), previousCapture),
+        isFalse,
+      );
+    },
+  );
 }

@@ -5,7 +5,8 @@ import 'biomarker_result.dart';
 /// A completed screening session, persisted to SQLite locally and synced
 /// to Supabase when connectivity is available.
 ///
-/// Only numeric biomarker values are stored — never audio.
+/// Only numeric acoustic values and explainable quality metadata are stored —
+/// never audio or raw video.
 class SessionModel {
   const SessionModel({
     required this.id,
@@ -25,6 +26,7 @@ class SessionModel {
     this.workerName,
     this.ownerId,
     this.childName,
+    this.cloudChildId,
     this.syncedToCloud = false,
     this.decisionTrace = const {},
   });
@@ -34,6 +36,7 @@ class SessionModel {
   final String anganwadiId;
   final String? workerName;
   final String? childName;
+  final String? cloudChildId;
   final int childAgeMonths;
   final DateTime sessionDate;
   final RiskLevel riskLevel;
@@ -59,6 +62,7 @@ class SessionModel {
     'state_code': stateCode,
     'worker_name': workerName,
     'child_name': childName,
+    'cloud_child_id': cloudChildId,
     'child_age_months': childAgeMonths,
     'session_date': sessionDate.toUtc().toIso8601String(),
     'risk_level': riskLevel.name,
@@ -82,6 +86,7 @@ class SessionModel {
       stateCode: map['state_code'] as String,
       workerName: map['worker_name'] as String?,
       childName: map['child_name'] as String?,
+      cloudChildId: map['cloud_child_id'] as String?,
       childAgeMonths: (map['child_age_months'] as num).toInt(),
       sessionDate: DateTime.parse(map['session_date'] as String),
       riskLevel: RiskLevel.values.byName(map['risk_level'] as String),
@@ -116,6 +121,28 @@ class SessionModel {
     'audio_source': audioSourceUsed,
     'session_date': sessionDate.toUtc().toIso8601String(),
   };
+
+  Map<String, dynamic> toDashboardJson() {
+    final childId = cloudChildId;
+    if (childId == null) {
+      throw StateError('Select an assigned child before syncing a screening.');
+    }
+    return {
+      'id': id,
+      'child_id': childId,
+      'created_by': ownerId,
+      'created_at': sessionDate.toUtc().toIso8601String(),
+      'analysis_status': 'COMPLETE',
+      'risk_level': riskLevel.name,
+      'child_age_months': childAgeMonths,
+      'vttl_ms': vttlMs,
+      'pfv_std': pfvStd,
+      'cvr_ratio': cvrRatio,
+      'audio_source': audioSourceUsed,
+      'decision_trace': decisionTrace,
+      'quality_reasons': const <String>[],
+    };
+  }
 
   static Map<String, dynamic> _decodeTrace(Object? raw) {
     if (raw is Map<String, dynamic>) return raw;

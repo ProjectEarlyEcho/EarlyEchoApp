@@ -4,6 +4,7 @@ import 'package:earlyecho/data/repositories/sync_repository.dart';
 import 'package:earlyecho/presentation/providers/auth_provider.dart';
 import 'package:earlyecho/presentation/providers/sync_provider.dart';
 import 'package:earlyecho/presentation/screens/auth/login_screen.dart';
+import 'package:earlyecho/presentation/screens/home/home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,6 +35,37 @@ class PendingSyncRepository extends SyncRepository {
 }
 
 void main() {
+  testWidgets('home authentication refresh tolerates queue failures', (
+    tester,
+  ) async {
+    final repository = PendingSyncRepository();
+    final auth = TestAuthNotifier();
+    final container = ProviderContainer(
+      overrides: [
+        appAuthProvider.overrideWith((ref) => auth),
+        syncRepositoryProvider.overrideWithValue(repository),
+      ],
+    );
+    addTearDown(container.dispose);
+    await tester.pumpWidget(
+      UncontrolledProviderScope(
+        container: container,
+        child: const MaterialApp(home: HomeScreen()),
+      ),
+    );
+    await auth.signIn(
+      email: 'parent@example.test',
+      password: 'test-password',
+      expectedRole: AppUserRole.parent,
+    );
+    await tester.pump();
+    expect(container.read(syncProvider).isSyncing, isTrue);
+    repository.pending.completeError(StateError('Storage unavailable'));
+    await tester.pumpAndSettle();
+    expect(container.read(syncProvider).isSyncing, isFalse);
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets(
     'successful login navigates before sync and tolerates a queue error',
     (tester) async {

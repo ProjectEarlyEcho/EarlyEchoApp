@@ -4,6 +4,10 @@ import '../../data/repositories/session_repository.dart';
 import '../../data/repositories/sync_repository.dart';
 import 'auth_provider.dart';
 
+final savedSessionsProvider = FutureProvider((ref) {
+  return ref.watch(sessionRepositoryProvider).getAllSessions();
+});
+
 /// User-facing sync status: how many screenings are still queued locally,
 /// whether an upload pass is running, and what the last pass produced.
 class SyncState {

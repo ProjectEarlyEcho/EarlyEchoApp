@@ -4,6 +4,7 @@ import '../../domain/scoring_engine.dart';
 class ChildProfile {
   const ChildProfile({
     this.childName,
+    this.cloudChildId,
     required this.childAgeMonths,
     required this.anganwadiId,
     required this.stateCode,
@@ -13,6 +14,7 @@ class ChildProfile {
 
   /// Optional — never transmitted unless explicitly enabled.
   final String? childName;
+  final String? cloudChildId;
 
   /// Required, valid range 12–60 months.
   final int childAgeMonths;
@@ -28,6 +30,7 @@ class ChildProfile {
 
   Map<String, dynamic> toJson() => {
     'child_name': childName,
+    'cloud_child_id': cloudChildId,
     'child_age_months': childAgeMonths,
     'anganwadi_id': anganwadiId,
     'state_code': stateCode,
@@ -38,6 +41,7 @@ class ChildProfile {
   factory ChildProfile.fromJson(Map<String, dynamic> json) {
     return ChildProfile(
       childName: json['child_name'] as String?,
+      cloudChildId: json['cloud_child_id'] as String?,
       childAgeMonths: (json['child_age_months'] as num).toInt(),
       anganwadiId: json['anganwadi_id'] as String,
       stateCode: json['state_code'] as String,

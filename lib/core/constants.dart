@@ -13,6 +13,9 @@ class EarlyEchoConstants {
   // ── Method channel (Flutter ↔ Kotlin audio pipeline) ──
   static const String audioPipelineChannel = 'com.earlyecho/audio_pipeline';
 
+  // ── Method channel (Flutter ↔ Kotlin video-quality pipeline) ──
+  static const String videoPipelineChannel = 'com.earlyecho/video_pipeline';
+
   // ── Child age bounds (months) ──
   static const int minChildAgeMonths = 12;
   static const int maxChildAgeMonths = 60;

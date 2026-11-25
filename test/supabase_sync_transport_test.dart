@@ -105,6 +105,68 @@ void main() {
   );
 
   test(
+    'linked-child upload uses one atomic RPC before acknowledging consent',
+    () async {
+      const linkedId = '30000000-0000-0000-0000-000000000002';
+      const linkedConsentId = '40000000-0000-0000-0000-000000000002';
+      await sessions.logConsent(
+        ConsentLog(
+          id: linkedConsentId,
+          sessionId: null,
+          anganwadiId: 'AW-001',
+          consentedAt: DateTime.utc(2026),
+        ),
+      );
+      await sessions.saveSession(
+        buildSession(id: linkedId, cloudChildId: 'assigned-child-id'),
+        consentLogId: linkedConsentId,
+      );
+      var rejectLinked = true;
+      handler = (request) async {
+        if (request.uri.path.endsWith('/sync_child_screening') &&
+            rejectLinked) {
+          await SupabaseHttpFixture.respond(request, {
+            'code': 'PT409',
+            'message': 'Conflicting care projection',
+          }, status: 409);
+        } else {
+          await SupabaseHttpFixture.respond(request, 'replayed');
+        }
+      };
+      final first = await sync.syncPending();
+      expect(first.conflicts, 1);
+      expect(first.remaining, 1);
+      expect(first.consentRemaining, 1);
+      final linkedRequests = requests
+          .where((r) => r['path'] == '/rest/v1/rpc/sync_child_screening')
+          .toList();
+      expect(linkedRequests, hasLength(1));
+      final body = linkedRequests.single['body'] as Map;
+      final mobile = body['p_screening'] as Map;
+      final dashboard = body['p_dashboard'] as Map;
+      expect(dashboard['id'], mobile['id']);
+      expect(dashboard['created_by'], ownerA);
+      expect(dashboard['created_at'], mobile['session_date']);
+      expect(dashboard['child_id'], 'assigned-child-id');
+      expect(dashboard.keys, isNot(contains('child_name')));
+      expect(
+        requests.where(
+          (r) => (r['body'] as Map)['p_consent']?['session_id'] == linkedId,
+        ),
+        isEmpty,
+      );
+      rejectLinked = false;
+      expect((await sync.syncPending()).allSynced, isTrue);
+      final retried = requests
+          .where((r) => r['path'] == '/rest/v1/rpc/sync_child_screening')
+          .toList();
+      expect(retried, hasLength(2));
+      expect(retried.first, retried.last);
+      expect((await sessions.getSessionById(linkedId))!.syncedToCloud, isTrue);
+    },
+  );
+
+  test(
     'PostgREST PT409 is an explicit retained conflict, not success',
     () async {
       handler = (request) => SupabaseHttpFixture.respond(request, {

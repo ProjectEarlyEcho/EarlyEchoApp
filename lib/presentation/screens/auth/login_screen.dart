@@ -46,17 +46,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       );
     }
     if (!mounted || !ref.read(appAuthProvider).signedIn) return;
-    final sync = ref.read(appAuthProvider).canSyncScreenings
-        ? ref.read(syncProvider.notifier)
-        : null;
+    final sync = ref.read(syncProvider.notifier);
     context.go('/');
-    if (sync != null) {
-      try {
-        await sync.syncNow();
-      } catch (_) {
-        // Authentication succeeds independently of storage/queue availability.
-        // The durable queue remains available for a later sync attempt.
-      }
+    try {
+      await sync.syncNow();
+    } catch (_) {
+      // Authentication succeeds independently of storage/queue availability.
+      // The durable queue remains available for a later sync attempt.
     }
   }
 
